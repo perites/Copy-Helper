@@ -14,3 +14,9 @@ class SettingsError(Exception):
     def __init__(self, message):
         self.message = message
         super().__init__(self.message)
+
+
+class OfferNotLive(Exception):
+    def __init__(self, offer_name):
+        self.message = f'Offer {offer_name} not in Live'
+        super().__init__(self.message)

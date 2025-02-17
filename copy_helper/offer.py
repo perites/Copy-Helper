@@ -1,4 +1,5 @@
 import logging
+import time
 
 import requests
 
@@ -24,12 +25,16 @@ class Offer:
 
         offers_info_cache = tools.FileHelper.read_json_data(path_to_offers_info_cache)
         offer_info_cache = offers_info_cache.get(offer_name)
-        if offer_info_cache:
+        if offer_info_cache and (offer_info_cache['time_set'] + 60 * 60 * 6) > time.time():
             logging.debug(f'Found in cache')
-            return offer_info_cache
+            offer_info = offer_info_cache
+        else:
+            logging.debug(f'Not found in cache, making request')
+            offer_info = cls.set_offer_cache(offer_name)
 
-        logging.debug(f'Not found in cache, making request')
-        offer_info = cls.set_offer_cache(offer_name)
+        if offer_info['status'] not in ['Live', 'Restricted']:
+            raise exceptions.OfferNotLive(offer_name)
+
         return offer_info
 
     @classmethod
@@ -62,6 +67,8 @@ class Offer:
                                                                      processed_offer_info['google_drive_folder_id'])
 
         processed_offer_info['google_drive_folder_id'] = google_drive_folder_id
+
+        processed_offer_info['time_set'] = time.time()
 
         return processed_offer_info
 

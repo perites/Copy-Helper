@@ -9,6 +9,7 @@ class GeneralSettings:
     parent_folder_id: str
     result_directory: str
     domains_short_names: dict
+    clear_old_copies: bool
 
     @classmethod
     def set_settings(cls):
@@ -22,6 +23,7 @@ class GeneralSettings:
         cls.parent_folder_id = settings_dict.get("FolderWithPartners")
         cls.result_directory = settings_dict.get("DirectoryToStoreResults")
         cls.domains_short_names = settings_dict.get("DomainsShortNames")
+        cls.clear_old_copies = True if settings_dict.get('ClearOldCopies') == 'yes' else False
 
     @staticmethod
     def parse_general_setting_file(general_setting_path):
