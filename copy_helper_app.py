@@ -57,20 +57,20 @@ def parse_args():
 
                 path_to_domain_folder = f'{copy_helper.settings.GeneralSettings.result_directory}/{domain_name}/'
                 dir_path = os.path.dirname(path_to_domain_folder)
+                if os.path.exists(dir_path):
+                    for filename in os.listdir(dir_path):
+                        if filename == date.replace('/', '.'):
+                            continue
 
-                for filename in os.listdir(dir_path):
-                    if filename == date.replace('/', '.'):
-                        continue
+                        file_path = os.path.join(dir_path, filename)
+                        try:
+                            if os.path.isfile(file_path) or os.path.islink(file_path):
+                                os.remove(file_path)  # Remove files
+                            elif os.path.isdir(file_path):
 
-                    file_path = os.path.join(dir_path, filename)
-                    try:
-                        if os.path.isfile(file_path) or os.path.islink(file_path):
-                            os.remove(file_path)  # Remove files
-                        elif os.path.isdir(file_path):
-
-                            shutil.rmtree(file_path)  # Remove subdirectories
-                    except Exception as e:
-                        print(f"Failed to delete {file_path}: {e}")
+                                shutil.rmtree(file_path)  # Remove subdirectories
+                        except Exception as e:
+                            print(f"Failed to delete {file_path}: {e}")
 
                 # path_to_domain_folder = f'{copy_helper.settings.GeneralSettings.result_directory}/{domain_name}'
                 # dir_path = os.path.dirname(path_to_domain_folder)
