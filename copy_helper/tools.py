@@ -64,18 +64,18 @@ class FileHelper:
 
 class RegExHelper:
     @staticmethod
-    def regex_replace(str_pattern, old, new):
+    def regex_replace(str_pattern, source, new):
         name_to_reqex = {'FontFamily': r'font-family\s*:\s*([^;]+);?',
-                         'FontSize': r'font-size\s*:\s*([^;]+);?',
-                         'LinkColor': r'color\s*:\s*([^;]+);?'}
+                         'FontSize': r'font-size\s*:\s*(16|18)?px;',
+                         'Color': r'color\s*:\s*([^;]+);?'}
 
         str_pattern = name_to_reqex.get(str_pattern) if name_to_reqex.get(str_pattern) else str_pattern
 
         pattern = re.compile(str_pattern, re.IGNORECASE)
-        if not pattern.search(old):
-            return old, False
+        if not pattern.search(source):
+            return source, False
 
-        content = pattern.sub(lambda match: new, old)
+        content = pattern.sub(lambda match: new, source)
 
         return content, True
 

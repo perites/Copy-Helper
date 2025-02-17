@@ -4,12 +4,10 @@ from . import google_services
 from . import settings
 
 from . import tools
-from bs4 import BeautifulSoup
 
 from . import offer
 
-import shutil
-import os
+import re
 
 
 class Domain:
@@ -44,7 +42,7 @@ class Domain:
         if user_domain_styles_settings:
             domain_styles_settings = {**default_style_settings, **user_domain_styles_settings}
 
-        html_copy = cls.change_link_style(html_copy, domain_styles_settings['LinkColor'])
+        html_copy = cls.change_links_color(html_copy, domain_styles_settings['LinkColor'])
         html_copy, success = tools.RegExHelper.regex_replace('FontFamily', html_copy,
                                                              f'font-family:{domain_styles_settings['FontFamily']};')
         if not success:
@@ -101,17 +99,27 @@ class Domain:
         replacements = {**default_replacements, **user_replacements}
 
         new_text = ''
-        is_inside_tag = False
-        entity = ''
+        inside_tag = False
+        inside_entity = False
         for char in text:
 
-            if char == '<':
-                is_inside_tag = True
+            match char:
+                case '<':
+                    inside_tag = True
 
-            elif char == '>':
-                is_inside_tag = False
+                case '>':
+                    inside_tag = False
 
-            replaced_char = replacements.get(char) or char if not is_inside_tag else char
+                case '&':
+                    inside_entity = True
+
+                case ';':
+                    inside_entity = False
+
+            if (not inside_tag) and (not inside_entity) and replacements.get(char):
+                replaced_char = replacements.get(char)
+            else:
+                replaced_char = char
 
             new_text += replaced_char
 
@@ -128,22 +136,36 @@ class Domain:
         #
         # replaced_char = char
 
-    @classmethod
-    def change_link_style(cls, html_copy, link_color):
-        soup = BeautifulSoup(html_copy, 'html.parser')
-        for a_tag in soup.find_all('a', style=True):
-            link_style = a_tag['style']
-            link_style, success = tools.RegExHelper.regex_replace('LinkColor', link_style,
-                                                                  f'color: {link_color};')
+    @staticmethod
+    def change_link_color(link_color, a_tag):
+        link_style = re.findall(r'style=".*?"', a_tag)
+        if link_style:
+            old_link_style = link_style[0].split('"')[1]
+            new_link_style, success = tools.RegExHelper.regex_replace('Color', old_link_style,
+                                                                      f'color: {link_color};')
             if not success:
-                link_style_list = link_style.split(';')
-                link_style_list.append(f'color: {link_color};')
-                link_style_list = list(filter(lambda el: el, link_style_list))
-                link_style = '; '.join(link_style_list)
+                link_styles_list = old_link_style.split(';')
+                link_styles_list.append(f'color: {link_color};')
+                link_styles_list = list(filter(lambda el: el, link_styles_list))
+                new_link_style = '; '.join(link_styles_list)
 
-            a_tag['style'] = link_style
+        else:
+            old_link_style = ' '
+            new_link_style = f'style="color: {link_color};"'
 
-        return soup.prettify()
+        new_a_tag, _ = tools.RegExHelper.regex_replace(old_link_style, a_tag, new_link_style)
+
+        return new_a_tag
+
+    @classmethod
+    def change_links_color(cls, html_copy, link_color):  # dark html staff here
+        a_tag_pattern = r'<\ba\b[\S\s]*?>'
+
+        for old_a_tag in re.findall(a_tag_pattern, html_copy):
+            new_a_tag = cls.change_link_color(link_color, old_a_tag)
+            html_copy = html_copy.replace(old_a_tag, new_a_tag)
+
+        return html_copy
 
     @classmethod
     def add_template(cls, name, html_copy, priority_block):
