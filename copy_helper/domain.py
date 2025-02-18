@@ -5,7 +5,7 @@ from . import settings
 
 from . import tools
 
-from . import offer
+from . import offer as offer_cls
 
 import re
 
@@ -193,18 +193,21 @@ class Domain:
 
     @classmethod
     def make_tracking_link(cls, domain_tracking_link_settings, offer_name, lift_number, img_code):
-
-        offer_info = offer.Offer.get_offer_info(offer_name)
+        try:
+            offer = offer_cls.Offer(offer_name)
+        except Exception as e:
+            logging.error(e)
+            return None
 
         match domain_tracking_link_settings['Type']:
             case "RT TM":
-                link = domain_tracking_link_settings['Start'] + offer_info["rt_tm"] + domain_tracking_link_settings[
-                    'End'] + offer_name + lift_number + img_code
+                link = domain_tracking_link_settings['Start'] + offer.info.tracking_id('rt_tm') + \
+                       domain_tracking_link_settings['End'] + offer_name + lift_number + img_code
 
             case 'IT2':
-                link = domain_tracking_link_settings['Start'] + offer_info["volume_green"] + \
+                link = domain_tracking_link_settings['Start'] + offer.info.tracking_id('volume_green') + \
                        domain_tracking_link_settings[
-                           'End'] + f'{offer_info['img_it']}_{lift_number}{img_code}'
+                           'End'] + f'{offer.info.tracking_id('img_it')}_{lift_number}{img_code}'
             case _:
                 logging.warning(f"Got unsupported link type {domain_tracking_link_settings['Type']}")
                 link = None
@@ -279,29 +282,35 @@ class Domain:
 
     @classmethod
     def get_and_save_files(cls, domain_name, date, str_copy):
-        offer_name, lift_number, img_code = tools.RegExHelper.match_str_copy(str_copy)
 
-        google_drive_folder_id = offer.Offer.get_offer_info(offer_name)['google_drive_folder_id']
-
-        copy_file, sl_file = offer.Offer.get_lift_files(offer_name, google_drive_folder_id, lift_number)
-
-        copy_file_content = google_services.GoogleDrive.get_file_content(copy_file)
-        sl_file_content = google_services.GoogleDrive.get_file_content(sl_file)
-        sl_file_content = (f'{str_copy}\n----------------------------------------\n' + sl_file_content +
-                           "\n----------------------------------------\n\n\n")
+        # MAKE OBLY SAVE FILES
 
         path_to_domain_folder = f'{settings.GeneralSettings.result_directory}/{domain_name}'
-
-        tools.FileHelper.write_to_file(
-            f'{path_to_domain_folder}/{date.replace('/', '.')}/{str_copy}.html',
-            copy_file_content)
-
-        info_file_text = tools.FileHelper.read_file(
-            f'{path_to_domain_folder}/info.txt')
-
-        if info_file_text and (str_copy in info_file_text):
+        offer_name, lift_number, img_code = tools.RegExHelper.match_str_copy(str_copy)
+        try:
+            offer = offer_cls.Offer(offer_name)
+        except Exception as e:
+            logging.error(e)
             return
 
-        tools.FileHelper.write_to_file(
-            f'{path_to_domain_folder}/{date.replace('/', '.')}/info.txt',
-            sl_file_content, 'a')
+        copy_file, sl_file = offer.get_lift_files(offer.info.google_drive_folder_id, lift_number)
+        if copy_file:
+            copy_file_content = google_services.GoogleDrive.get_file_content(copy_file)
+            tools.FileHelper.write_to_file(
+                f'{path_to_domain_folder}/{date.replace('/', '.')}/{str_copy}.html',
+                copy_file_content)
+
+        if sl_file:
+            sl_file_content = google_services.GoogleDrive.get_file_content(sl_file)
+            sl_file_content = (f'{str_copy}\n----------------------------------------\n' + sl_file_content +
+                               "\n----------------------------------------\n\n\n")
+
+            info_file_text = tools.FileHelper.read_file(
+                f'{path_to_domain_folder}/info.txt')
+
+            if info_file_text and (str_copy in info_file_text):
+                return
+
+            tools.FileHelper.write_to_file(
+                f'{path_to_domain_folder}/{date.replace('/', '.')}/info.txt',
+                sl_file_content, 'a')

@@ -1,7 +1,7 @@
 # TODO SLs are writed two times
 # TODO logs  , error handlaig
 # TODO improve
-
+# TODO change logging  debug to info in some places
 
 import argparse
 import copy_helper

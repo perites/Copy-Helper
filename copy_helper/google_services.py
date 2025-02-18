@@ -59,33 +59,6 @@ class GoogleDrive:
     drive_service = ServicesHelper.get_service('drive')
 
     @classmethod
-    def get_offer_general_folder(cls, offer_name):
-        for partner_folder in cls.get_folders_of_folder(settings.GeneralSettings.parent_folder_id):
-            partner_folder_id = partner_folder['id']
-            offer_general_folder = cls.get_folder_by_name(offer_name, partner_folder_id, False)
-            if offer_general_folder:
-                return offer_general_folder
-
-        raise exceptions.NoPartnersWithOffer(offer_name)
-
-    @classmethod
-    def get_offer_folder_id(cls, offer_name):
-        offer_general_folder = cls.get_offer_general_folder(offer_name)
-        offer_folder_id = cls.get_offer_folder_id_from_general(offer_general_folder)
-        return offer_folder_id
-
-    @classmethod
-    def get_offer_folder_id_from_general(cls, offer_general_folder):
-        for general_folder in cls.get_folders_of_folder(offer_general_folder['id']):
-            if general_folder['name'].strip().lower().startswith("html+sl"):
-                offer_folder_id = general_folder['id']
-
-                return offer_folder_id
-
-        raise Exception(
-            f"No 'HTML+SL' folder was found in General Offer Folder (name:{offer_general_folder['name']})")
-
-    @classmethod
     def execute_query(cls, query, fields='files(id, name)'):
         result = cls.drive_service.files().list(q=query, fields=fields,
                                                 includeItemsFromAllDrives=True,
@@ -107,6 +80,14 @@ class GoogleDrive:
         query = f"mimeType='application/vnd.google-apps.folder' and trashed=false and '{parent_folder_id}' in parents"
         folders = cls.execute_query(query)
         return folders
+
+    @classmethod
+    def get_files_from_folder(cls, folder_id):
+        query = f'mimeType!="application/vnd.google-apps.folder" and trashed=false and "{folder_id}" in parents'
+        fields = 'files(id, name, mimeType)'
+        lift_folder_files = cls.execute_query(query, fields)
+
+        return lift_folder_files
 
     @classmethod
     def get_file_content(cls, file):
