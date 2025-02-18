@@ -91,15 +91,3 @@ class RegExHelper:
             return offer_name, lift_number, img_code
 
         logging.debug(f'Failed to match str_copy {str_copy}')
-
-
-def clear_cache(option):
-    if option == 'all':
-        FileHelper.write_json_data('SystemData/offers_info_cache.json', {})
-        return
-
-    all_cache = FileHelper.read_json_data('SystemData/offers_info_cache.json')
-    if not all_cache.get(option):
-        return
-    del all_cache[option]
-    FileHelper.write_json_data('SystemData/offers_info_cache.json', all_cache)

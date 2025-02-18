@@ -44,7 +44,7 @@ def parse_args():
     date = args.date
 
     if args.clearcache:
-        copy_helper.tools.clear_cache(args.clearcache)
+        copy_helper.offer.Offer.clear_cache(args.clearcache)
 
     match args.action:
         case 'make-copies':
