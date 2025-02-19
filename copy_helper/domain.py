@@ -1,3 +1,4 @@
+import dataclasses
 import logging
 
 from . import google_services
@@ -10,27 +11,66 @@ from . import offer as offer_cls
 import re
 
 
-class Domain:
+@dataclasses.dataclass
+class DomainSettings:
+    page: str
 
+    @classmethod
+    def create_from_dict(cls, domain_info):
+        return cls(
+            page=domain_info['PageInBroadcast']
+        )
+
+
+class DomainGoogleSheetsHelper(google_services.GoogleSheets):
     @staticmethod
-    def get_copies(name, date):
-        domain_settings = tools.FileHelper.read_json_data(f'Settings/Domains/{name}/general.json')
-        page = domain_settings['PageInBroadcast']
-
+    def _get_copies(name, page, date):
         domain_index = google_services.GoogleSheets.get_table_index_of_value(settings.GeneralSettings.broadcast_id,
                                                                              name,
                                                                              f'{page}!1:1')
+
+        if not domain_index:
+            logging.warning(f'Could not find domain {name} in Broadcast')
+            return
+
         date_index = google_services.GoogleSheets.get_table_index_of_value(settings.GeneralSettings.broadcast_id, date,
                                                                            f'{page}!A:A',
                                                                            False)
+        if not domain_index:
+            logging.warning(f'Could not find date {date} in Broadcast')
+            return
 
         date_row = date_index + 1
-
+        copies_range = f'{page}!{date_row}:{date_row}'
         copies_for_date = google_services.GoogleSheets.get_data_from_range(settings.GeneralSettings.broadcast_id,
-                                                                           f'{page}!{date_row}:{date_row}')
+                                                                           copies_range)
         copies_for_domain = copies_for_date[0][domain_index]
+        if not copies_for_domain:
+            logging.warning(f'Could not find copies in range {copies_range} in Broadcast')
+            return
 
         return copies_for_domain.split(' ')
+
+
+class Domain(DomainGoogleSheetsHelper):
+    def __init__(self, domain_name):
+        self.name = domain_name
+        self.settings = DomainSettings.create_from_dict(self.get_file_data('settings'))
+
+    def get_file_data(self, file_name):
+        path_to_domain = f'Settings/Domains/{self.name}'
+        match file_name:
+            case 'settings':
+                return tools.read_json_file(f'{path_to_domain}/general.json')
+
+            case 'styles':
+                return tools.read_json_file(f'{path_to_domain}/styles.json')
+
+            case 'template':
+                return tools.read_json_file(f'{path_to_domain}/template.html')
+
+    def get_copies(self, date):
+        return self._get_copies(self.name, self.settings.page, date)
 
     @classmethod
     def apply_styles(cls, name, html_copy, priority_block):

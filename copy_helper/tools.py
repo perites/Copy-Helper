@@ -9,6 +9,24 @@ from docx import Document
 import re
 
 
+def read_json_file(path):
+    logging.debug(f'Reading json file {path}')
+    with open(path, 'r', encoding="utf-8") as file:
+        return json.load(file)
+
+
+def write_json_file(path, data):
+    with open(path, 'w') as file:
+        json.dump(data, file, indent=4)
+
+
+def extract_text_from_docx(binary_data):
+    doc_file = BytesIO(binary_data)
+    doc = Document(doc_file)
+    text = "\n".join([para.text for para in doc.paragraphs])
+    return text
+
+
 class FileHelper:
     @staticmethod
     def read_json_data(path_to_json_file):

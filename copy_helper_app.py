@@ -23,7 +23,7 @@ logging.basicConfig(
 
 parser = argparse.ArgumentParser(prog="CopyHelper", description="Program that automates and makes easier copy making")
 
-parser.add_argument('action', choices=['make-copies', 'apply-style'])
+parser.add_argument('action', choices=['make-domain', 'apply-style'])
 parser.add_argument('domainname')
 parser.add_argument('date')
 
@@ -47,30 +47,11 @@ def parse_args():
         copy_helper.offer.Offer.clear_cache(args.clearcache)
 
     match args.action:
-        case 'make-copies':
+        case 'make-domain':
 
             copies = args.copies
             if not copies:
                 copies = copy_helper.Domain.get_copies(domain_name, date)
-
-            if copy_helper.settings.GeneralSettings.clear_old_copies:
-
-                path_to_domain_folder = f'{copy_helper.settings.GeneralSettings.result_directory}/{domain_name}/'
-                dir_path = os.path.dirname(path_to_domain_folder)
-                if os.path.exists(dir_path):
-                    for filename in os.listdir(dir_path):
-                        if filename == date.replace('/', '.'):
-                            continue
-
-                        file_path = os.path.join(dir_path, filename)
-                        try:
-                            if os.path.isfile(file_path) or os.path.islink(file_path):
-                                os.remove(file_path)  # Remove files
-                            elif os.path.isdir(file_path):
-
-                                shutil.rmtree(file_path)  # Remove subdirectories
-                        except Exception as e:
-                            print(f"Failed to delete {file_path}: {e}")
 
                 # path_to_domain_folder = f'{copy_helper.settings.GeneralSettings.result_directory}/{domain_name}'
                 # dir_path = os.path.dirname(path_to_domain_folder)
@@ -111,19 +92,65 @@ def change_copy(domain_name, date, str_copy, copy_link, priority_block):
         copy_helper.tools.FileHelper.write_to_file(f'{path_to_date_folder}/{str_copy}.html', new_html)
 
 
-def get_commits():
-    repo = git.Repo('.')  # Open the current repository
-    current_commit = repo.head.commit.hexsha  # Local commit
-    remote_commit = repo.git.ls_remote("origin", repo.active_branch.name).split()[0]  # Remote commit
+# def get_commits():
+#     repo = git.Repo('.')  # Open the current repository
+#     current_commit = repo.head.commit.hexsha  # Local commit
+#     remote_commit = repo.git.ls_remote("origin", repo.active_branch.name).split()[0]  # Remote commit
+#
+#     return current_commit, remote_commit
 
-    return current_commit, remote_commit
 
+def main_page():
+    print('Type what you want to do:')
+    print('make-domain, apply-styles')
+    action = input()
+    match action:
+        case 'make-domain':
+            print('To make domain, enter <domain-name>(full name or abbreviate) <date>(same as column in broadcast)')
+            domain_name, date = input().split(' ')
+
+            domain_name = copy_helper.settings.GeneralSettings.domains_short_names.get(domain_name)
+            if not domain_name:
+                print('Did not found that abbreviate in settings')
+
+            domain = copy_helper.Domain(domain_name)
+            if not domain:
+                print(
+                    f'Cant find that domain, ensure that you entering name correctly and {domain_name} in Settings/Domains')
+                raise Exception
+
+            copies = domain.get_copies(date)
+            if not copies:
+                print(
+                    'Copies were not found for some reason, you can enter them manually or just press enter to return to begining')
+                copies = input().split(' ')
+
+            copies = list(filter(lambda copy: copy, map(copy_helper.Copy.create, copies)))
+
+            print(f'Successfully processed {len(copies)} copies.')
+
+            print(domain, copies)
+        case 'apply-styles':
+            pass
+
+
+import os
 
 if __name__ == "__main__":
-    copy_helper.settings.GeneralSettings.set_settings()
+    print('Welcome to copy-helper alfa version')
 
-    current_commit, remote_commit = get_commits()
-    if current_commit != remote_commit:
-        print("New update available")
-        print("To update you can run: git pull origin")
-    parse_args()
+    copy_helper.settings.GeneralSettings.set_settings()
+    while True:
+        try:
+            main_page()
+        except Exception as e:
+            logging.exception(e)
+            print('Returning to main page')
+            main_page()
+
+    #
+    # current_commit, remote_commit = get_commits()
+    # if current_commit != remote_commit:
+    #     print("New update available")
+    #     print("To update you can run: git pull origin")
+    # parse_args()

@@ -139,16 +139,11 @@ class Offer(OfferGoogleDriveHelper):
         logging.debug('Setting new offers info cache')
         tools.FileHelper.write_json_data(PATH_TO_OFFERS_INFO_CACHE, new_offers_info_cache)
 
-    def _set_offer_cache(self=None, offer_info=None, offers_info_cache=None, offer_name=""):
-        name = self.name or offer_name
-        if not name:
-            logging.warning('Nor Offer object nor offer_name provided, doing nothing')
-            return
-
-        logging.debug(f'Caching info for offer {name}')
+    def _set_offer_cache(self, offer_info, offers_info_cache=None):
+        logging.debug(f'Caching info for offer {self.name}')
 
         offers_info_cache = offers_info_cache if offers_info_cache else self._get_cache()
-        offers_info_cache[name] = offer_info
+        offers_info_cache[self.name] = offer_info
 
         self._set_cache(offers_info_cache)
 
@@ -214,10 +209,12 @@ class Offer(OfferGoogleDriveHelper):
                 cls._set_cache({})
 
             case _:
-                all_cache = tools.FileHelper.read_json_data('SystemData/offers_info_cache.json')
+                all_cache = cls._get_cache()
                 if not all_cache.get(option):
                     return
-                cls._set_offer_cache(offer_info={}, offers_info_cache=all_cache, offer_name=option)
+
+                del all_cache[option]
+                cls._set_cache(all_cache)
 
 
 class OfferException(Exception):
