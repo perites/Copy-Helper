@@ -11,6 +11,7 @@ import os
 import shutil
 import git
 
+# logging.root =
 logging.basicConfig(
     format='%(asctime)s [%(levelname)s] : %(message)s',
     datefmt='%d-%m %H:%M:%S:%M',
@@ -98,38 +99,62 @@ def change_copy(domain_name, date, str_copy, copy_link, priority_block):
 #     remote_commit = repo.git.ls_remote("origin", repo.active_branch.name).split()[0]  # Remote commit
 #
 #     return current_commit, remote_commit
+def process_copy(copy, domain):
+    pass
+
+
+def cprint(*args, **kwargs):
+    prefix = '///>'
+    print(prefix, *args, **kwargs)
+
+
+def cinput(hint=''):
+    prefix = '///> ' + hint
+    return input(prefix)
 
 
 def main_page():
-    print('Type what you want to do:')
-    print('make-domain, apply-styles')
-    action = input()
+    cprint('Type what you want to do:')
+    cprint('make-domain, apply-styles, exit')
+    action = cinput()
     match action:
+        case 'exit':
+            exit()
+
         case 'make-domain':
-            print('To make domain, enter <domain-name>(full name or abbreviate) <date>(same as column in broadcast)')
-            domain_name, date = input().split(' ')
+            cprint('To make domain, enter <domain-name>(full name or abbreviate) <date>(same as column in broadcast)')
+            domain_name, date = cinput().split(' ')
 
             domain_name = copy_helper.settings.GeneralSettings.domains_short_names.get(domain_name)
             if not domain_name:
-                print('Did not found that abbreviate in settings')
+                cprint('Did not found that abbreviate in settings')
 
             domain = copy_helper.Domain(domain_name)
             if not domain:
-                print(
+                cprint(
                     f'Cant find that domain, ensure that you entering name correctly and {domain_name} in Settings/Domains')
                 raise Exception
 
             copies = domain.get_copies(date)
             if not copies:
-                print(
+                cprint(
                     'Copies were not found for some reason, you can enter them manually or just press enter to return to begining')
-                copies = input().split(' ')
+                copies = cinput().split(' ')
 
             copies = list(filter(lambda copy: copy, map(copy_helper.Copy.create, copies)))
 
-            print(f'Successfully processed {len(copies)} copies.')
+            cprint(f'Successfully processed {len(copies)} copies.')
+            cprint(domain, copies)
 
-            print(domain, copies)
+            path_to_domain_results = copy_helper.settings.GeneralSettings.result_directory + f'/{date.replace('/', '.')}/{domain.name}/'
+
+            for copy in copies:
+                domain.save_copy_files(copy, path_to_domain_results)
+
+                # cprint(copy_file, sl_file)
+
+            #     process_copy(copy, domain)
+
         case 'apply-styles':
             pass
 
@@ -137,6 +162,9 @@ def main_page():
 import os
 
 if __name__ == "__main__":
+
+    prefix = '///> '
+
     print('Welcome to copy-helper alfa version')
 
     copy_helper.settings.GeneralSettings.set_settings()

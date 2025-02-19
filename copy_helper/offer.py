@@ -27,20 +27,19 @@ class OfferInfo:
 
 
 class OfferGoogleDriveHelper(google_services.GoogleDrive):
-    def __init__(self, name):
-        self.name = name
 
-    def get_lift_files(self, google_drive_folder_id, lift_number):
-        logging.info(f'Searching for lift files for offer {self.name} and lift {lift_number}')
+    @classmethod
+    def _get_copy_files(cls, name, google_drive_folder_id, lift_number):
+        logging.info(f'Searching for lift files for offer {name} and lift {lift_number}')
 
         if not google_drive_folder_id:
             logging.warning('No Google Drive folder id was provided, lift files not received')
             return None, None
 
-        lift_folder = self.get_folder_by_name(f"Lift {lift_number}", google_drive_folder_id)
-        lift_folder_files = self.get_files_from_folder(lift_folder['id'])
+        lift_folder = cls.get_folder_by_name(f"Lift {lift_number}", google_drive_folder_id)
+        lift_folder_files = cls.get_files_from_folder(lift_folder['id'])
 
-        copy_file = None
+        lift_file = None
         mjml_found = False
 
         sl_file = None
@@ -49,12 +48,12 @@ class OfferGoogleDriveHelper(google_services.GoogleDrive):
             if not mjml_found:
                 if (file['name'].lower().endswith('.html')) and ('mjml' in file['name'].lower()) and (
                         'SL' not in file['name']):
-                    copy_file = file
+                    lift_file = file
                     mjml_found = True
-                    logging.debug(f"Found copy file (mjml): {copy_file['name']}")
+                    logging.debug(f"Found copy file (mjml): {lift_file['name']}")
 
-                elif (not copy_file) and (file['name'].lower().endswith('.html')) and ('SL' not in file['name']):
-                    copy_file = file
+                elif (not lift_file) and (file['name'].lower().endswith('.html')) and ('SL' not in file['name']):
+                    lift_file = file
 
             if not sl_file:
                 if 'sl' in file['name'].lower():
@@ -64,26 +63,28 @@ class OfferGoogleDriveHelper(google_services.GoogleDrive):
             if mjml_found and sl_file:
                 break
 
-        return copy_file, sl_file
+        return lift_file, sl_file
 
-    def _get_offer_general_folder(self):
-        for partner_folder in self.get_folders_of_folder(settings.GeneralSettings.parent_folder_id):
+    @classmethod
+    def _get_offer_general_folder(cls, name):
+        for partner_folder in cls.get_folders_of_folder(settings.GeneralSettings.parent_folder_id):
             partner_folder_id = partner_folder['id']
-            offer_general_folder = self.get_folder_by_name(self.name, partner_folder_id, False)
+            offer_general_folder = cls.get_folder_by_name(name, partner_folder_id, False)
             if offer_general_folder:
                 return offer_general_folder
 
-        logging.warning(f'No Partners with offer {self.name} was found in GoogleDrive')
+        logging.warning(f'No Partners with offer {name} was found in GoogleDrive')
 
-    def _get_offer_folder_id(self):
-        offer_general_folder = self._get_offer_general_folder()
+    @classmethod
+    def _get_offer_folder_id(cls, name):
+        offer_general_folder = cls._get_offer_general_folder(name)
         if not offer_general_folder:
             return
 
-        offer_folder_id = self.get_folder_by_name('HTML+SL', offer_general_folder, strict=False)[0]
+        offer_folder_id = cls.get_folder_by_name('HTML+SL', offer_general_folder, strict=False)[0]
         if not offer_folder_id:
             logging.warning(
-                f'Folder "HTML+SL" was not found for offer {self.name}. Folder id where searching: {offer_general_folder}')
+                f'Folder "HTML+SL" was not found for offer {name}. Folder id where searching: {offer_general_folder}')
         return offer_folder_id
 
 
@@ -93,8 +94,6 @@ class Offer(OfferGoogleDriveHelper):
     def __init__(self, name):
         self.name = name
         self.info = self.get_offer_info()
-
-        super().__init__(name)
 
     def get_offer_info(self):
         logging.info(f'Searching info for offer {self.name}')
@@ -114,18 +113,8 @@ class Offer(OfferGoogleDriveHelper):
                          _tracking_ids=offer_info['tracking_ids']
                          )
 
-    def _find_cached_info(self):
-        offers_info_cache = self._get_cache()
-        offer_cached_info = offers_info_cache.get(self.name)
-        if not offer_cached_info:
-            logging.debug(f'Offer {self.name} was not found in cache')
-            return
-        elif offer_cached_info['creation_timestamp'] + MAX_CACHE_DURATION_SECONDS < time.time():
-            logging.debug(f'Cache for offer {self.name} expired')
-            return
-
-        logging.debug(f'Found valid cache for {self.name}')
-        return offer_cached_info
+    def get_lift_files(self, lift_number):
+        return self._get_copy_files(self.name, self.info.google_drive_folder_id, lift_number)
 
     @staticmethod
     def _get_cache():
@@ -139,6 +128,19 @@ class Offer(OfferGoogleDriveHelper):
         logging.debug('Setting new offers info cache')
         tools.FileHelper.write_json_data(PATH_TO_OFFERS_INFO_CACHE, new_offers_info_cache)
 
+    def _find_cached_info(self):
+        offers_info_cache = self._get_cache()
+        offer_cached_info = offers_info_cache.get(self.name)
+        if not offer_cached_info:
+            logging.debug(f'Offer {self.name} was not found in cache')
+            return
+        elif offer_cached_info['creation_timestamp'] + MAX_CACHE_DURATION_SECONDS < time.time():
+            logging.debug(f'Cache for offer {self.name} expired')
+            return
+
+        logging.debug(f'Found valid cache for {self.name}')
+        return offer_cached_info
+
     def _set_offer_cache(self, offer_info, offers_info_cache=None):
         logging.debug(f'Caching info for offer {self.name}')
 
@@ -151,7 +153,8 @@ class Offer(OfferGoogleDriveHelper):
         logging.debug(f'Getting info for name {self.name} from backend')
 
         offers_info_endpoint = 'https://prior-shea-inri-a582c73b.koyeb.app/monday/product/'
-        offer_info_request = requests.get(offers_info_endpoint + self.name)
+        offer_info_request = requests.get(
+            offers_info_endpoint + self.name + f'?requester=copy-helper-{settings.GeneralSettings.machine_id}')
 
         if not offer_info_request.content:
             logging.warning(f'Offer {self.name} was not found at backend')
@@ -195,7 +198,7 @@ class Offer(OfferGoogleDriveHelper):
             google_drive_folder_id = google_drive_offer_folder_url.split('/folders/')[1]
         else:
             logging.info(f'Google drive offer folder url was not found in Monday, starting manual search')
-            google_drive_folder_id = self._get_offer_folder_id()
+            google_drive_folder_id = self._get_offer_folder_id(self.name)
 
         if not google_drive_folder_id:
             logging.warning(f'Google drive folder id was not found for offer {self.name}, returning None')

@@ -20,7 +20,7 @@ class Copy:
             logging.debug(f'Failed to find offer name, lift_number and img_code in {str_copy}')
             return None
 
-        return cls(match.group(1), match.group(2), match.group(3))
+        return cls(offer.Offer(match.group(1)), match.group(2), match.group(3))
 
     def __str__(self):
         return self.offer.name + self.lift_number + self.img_code

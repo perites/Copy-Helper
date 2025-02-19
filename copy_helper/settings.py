@@ -2,6 +2,11 @@ import logging
 
 from . import exceptions
 from . import tools
+import platform
+import subprocess
+import hashlib
+import os
+import uuid
 
 
 class GeneralSettings:
@@ -10,6 +15,7 @@ class GeneralSettings:
     result_directory: str
     domains_short_names: dict
     clear_old_copies: bool
+    machine_id: str
 
     @classmethod
     def set_settings(cls):
@@ -24,6 +30,40 @@ class GeneralSettings:
         cls.result_directory = settings_dict.get("DirectoryToStoreResults")
         cls.domains_short_names = settings_dict.get("DomainsShortNames")
         cls.clear_old_copies = True if settings_dict.get('ClearOldCopies') == 'yes' else False
+        cls.machine_id = cls.get_unique_machine_id()
+
+    @staticmethod
+    def get_unique_machine_id():
+        os_name = platform.system()
+
+        try:
+            if os_name == "Windows":
+                machine_id = subprocess.check_output(
+                    'reg query HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Cryptography /v MachineGuid',
+                    shell=True
+                ).decode().strip().split()[-1]
+
+            elif os_name == "Linux":
+                with open("/etc/machine-id", "r") as f:
+                    machine_id = f.read().strip()
+
+            elif os_name == "Darwin":  # macOS
+                machine_id = subprocess.check_output(
+                    "ioreg -rd1 -c IOPlatformExpertDevice | grep IOPlatformUUID",
+                    shell=True
+                ).decode().strip().split('"')[-2]
+
+            else:
+                machine_id = os.popen("uuidgen").read().strip()
+
+        except Exception as e:
+            logging.warning(f'Could not get secure machine id')
+            machine_id = uuid.getnode()
+
+        hashed = hashlib.sha256(machine_id.encode()).hexdigest()
+        short_id = str(int(hashed[:16], 16))[:13]
+
+        return short_id
 
     @staticmethod
     def parse_general_setting_file(general_setting_path):

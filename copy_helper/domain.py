@@ -320,37 +320,61 @@ class Domain(DomainGoogleSheetsHelper):
         logging.warning(f'No keyword was found in {text_value}')
         return ''
 
-    @classmethod
-    def get_and_save_files(cls, domain_name, date, str_copy):
+    def save_copy_files(self, copy, path_to_domain_results):
+        lift_file, sl_file = copy.offer.get_copy_files(copy.lift_number)
 
-        # MAKE OBLY SAVE FILES
-
-        path_to_domain_folder = f'{settings.GeneralSettings.result_directory}/{domain_name}'
-        offer_name, lift_number, img_code = tools.RegExHelper.match_str_copy(str_copy)
-        try:
-            offer = offer_cls.Offer(offer_name)
-        except Exception as e:
-            logging.error(e)
-            return
-
-        copy_file, sl_file = offer.get_lift_files(offer.info.google_drive_folder_id, lift_number)
-        if copy_file:
-            copy_file_content = google_services.GoogleDrive.get_file_content(copy_file)
-            tools.FileHelper.write_to_file(
-                f'{path_to_domain_folder}/{date.replace('/', '.')}/{str_copy}.html',
-                copy_file_content)
+        if lift_file:
+            self.save_lift_file(lift_file, path_to_domain_results, str(copy))
+        else:
+            logging.warning(f'Could not get copy file for offer {copy.offer.name}')
 
         if sl_file:
-            sl_file_content = google_services.GoogleDrive.get_file_content(sl_file)
-            sl_file_content = (f'{str_copy}\n----------------------------------------\n' + sl_file_content +
-                               "\n----------------------------------------\n\n\n")
+            self.get_and_save_files(sl_file, path_to_domain_results, str(copy))
+        else:
+            logging.warning(f'Could not get sl file for offer {copy.offer.name}')
 
-            info_file_text = tools.FileHelper.read_file(
-                f'{path_to_domain_folder}/info.txt')
-
-            if info_file_text and (str_copy in info_file_text):
+    @staticmethod
+    def save_lift_file(copy_file, path_to_domain_results, str_copy):
+        try:
+            copy_file_content = google_services.GoogleDrive.get_file_content(copy_file)
+            if not copy_file_content:
+                logging.warning(f'Could nor receive content of file {copy_file}')
                 return
 
-            tools.FileHelper.write_to_file(
-                f'{path_to_domain_folder}/{date.replace('/', '.')}/info.txt',
-                sl_file_content, 'a')
+            path = path_to_domain_results + f'{str_copy}.html'
+            with open(path, 'r', encoding='utf-8') as file:
+                file.write(copy_file)
+
+        except Exception:
+            logging.exception(f'Error while saving copy file {copy_file} for {str_copy}')
+
+    @staticmethod
+    def save_sl_file(sl_file, path_to_domain_results, str_copy):
+        try:
+            sl_file_content = google_services.GoogleDrive.get_file_content(sl_file)
+            if not sl_file_content:
+                logging.warning(f'Could nor receive content of file {sl_file}')
+                return
+
+            path_to_sls_file = f'{path_to_domain_results}/SLs.txt'
+            try:
+                with open(path_to_sls_file, 'r', encoding='utf-8') as file:
+                    sls_file_content = file.read()
+
+                    print(sls_file_content)
+
+                    if str_copy in sls_file_content:
+                        return
+
+            except FileNotFoundError:
+                pass
+
+            copy_sls = (f'{str_copy}\n----------------------------------------\n' + sl_file_content +
+                        "\n----------------------------------------\n\n\n")
+
+            with open(path_to_sls_file, 'a', encoding='utf-8') as file:
+                file.write(copy_sls)
+
+
+        except Exception:
+            logging.exception(f'Error while saving sl file {sl_file} for {str_copy}')
