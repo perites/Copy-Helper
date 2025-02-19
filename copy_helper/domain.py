@@ -9,16 +9,19 @@ from . import tools
 from . import offer as offer_cls
 
 import re
+import os
 
 
 @dataclasses.dataclass
 class DomainSettings:
     page: str
+    tracking_link_info: dict
 
     @classmethod
     def create_from_dict(cls, domain_info):
         return cls(
-            page=domain_info['PageInBroadcast']
+            page=domain_info['PageInBroadcast'],
+            tracking_link_info=domain_info['TrackingLinkInfo']
         )
 
 
@@ -221,43 +224,44 @@ class Domain(DomainGoogleSheetsHelper):
 
         return done_template
 
-    @classmethod
-    def make_links(cls, name, str_copy):
-        domain_settings = tools.FileHelper.read_json_data(f'Settings/Domains/{name}/general.json')
-        offer_name, lift_number, img_code = tools.RegExHelper.match_str_copy(str_copy)
+    # def make_links(self, copy):
+    #     # domain_settings = tools.FileHelper.read_json_data(f'Settings/Domains/{name}/general.json')
+    #     # offer_name, lift_number, img_code = tools.RegExHelper.match_str_copy(str_copy)
+    #
+    #     tracking_link = cls.make_tracking_link(domain_settings['TrackingLink'], offer_name, lift_number, img_code)
+    #     priority_block = cls.get_priority_block(domain_settings['PriorityLink'], offer_name)
+    #
+    #     return tracking_link, priority_block
 
-        tracking_link = cls.make_tracking_link(domain_settings['TrackingLink'], offer_name, lift_number, img_code)
-        priority_block = cls.get_priority_block(domain_settings['PriorityLink'], offer_name)
-
-        return tracking_link, priority_block
-
-    @classmethod
-    def make_tracking_link(cls, domain_tracking_link_settings, offer_name, lift_number, img_code):
+    def make_tracking_link(self, copy):
         try:
-            offer = offer_cls.Offer(offer_name)
-        except Exception as e:
-            logging.error(e)
-            return None
+            logging.info(f'Creating link for domain {self.name} copy {str(copy)}')
+            tracking_link_info = self.settings.tracking_link_info
 
-        match domain_tracking_link_settings['Type']:
-            case "RT TM":
-                link = domain_tracking_link_settings['Start'] + offer.info.tracking_id('rt_tm') + \
-                       domain_tracking_link_settings['End'] + offer_name + lift_number + img_code
+            match tracking_link_info['Type']:
+                case "RT TM":
+                    tracking_link = tracking_link_info['Start'] + copy.offer.info.tracking_id('rt_tm') + \
+                                    tracking_link_info[
+                                        'End'] + str(copy)
 
-            case 'IT2':
-                link = domain_tracking_link_settings['Start'] + offer.info.tracking_id('volume_green') + \
-                       domain_tracking_link_settings[
-                           'End'] + f'{offer.info.tracking_id('img_it')}_{lift_number}{img_code}'
-            case _:
-                logging.warning(f"Got unsupported link type {domain_tracking_link_settings['Type']}")
-                link = None
+                case 'IT2':
+                    tracking_link = tracking_link_info['Start'] + copy.offer.info.tracking_id('volume_green') + \
+                                    tracking_link_info[
+                                        'End'] + f'{copy.offer.info.tracking_id('img_it')}_{copy.lift_number}{copy.img_code}'
+                case _:
+                    logging.warning(f"Got unsupported link type {tracking_link_info['Type']}")
+                    tracking_link = tracking_link_info['Start'] + "UNSUPPORTED_TYPE" + tracking_link_info[
+                        'End'] + "UNSUPPORTED_TYPE"
 
-        return link
+            return tracking_link
 
-    @classmethod
-    def get_priority_block(cls, domain_priority_link_settings, offer_name):
+        except Exception:
+            logging.exception(f'Error while creating tracking link for {self.name} copy {copy.name}')
+            return 'ERROR_CREATING_LINK'
 
-        priority_products_table_id = '1e40khWM1dKTje_vZi4K4fL-RA8-D6jhp2wmZSXurQH0'
+    def make_priority_block(self, offer_name):
+
+        priority_products_table_id = ''
 
         priority_product_index = google_services.GoogleSheets.get_table_index_of_value(priority_products_table_id,
                                                                                        offer_name,
@@ -320,43 +324,70 @@ class Domain(DomainGoogleSheetsHelper):
         logging.warning(f'No keyword was found in {text_value}')
         return ''
 
-    def save_copy_files(self, copy, path_to_domain_results):
-        lift_file, sl_file = copy.offer.get_copy_files(copy.lift_number)
+    def get_copy_files_content(self, copy):
+        try:
+            lift_file, sl_file = copy.offer.get_copy_files(copy.lift_number)
 
-        if lift_file:
-            self.save_lift_file(lift_file, path_to_domain_results, str(copy))
-        else:
-            logging.warning(f'Could not get copy file for offer {copy.offer.name}')
+            if lift_file:
+                lift_file_content = self.get_copy_file_content(lift_file)
+            else:
+                logging.warning(f'Could not get lift file for offer {copy.offer.name}')
+                lift_file_content = ''
 
-        if sl_file:
-            self.save_sl_file(sl_file, path_to_domain_results, str(copy))
-        else:
-            logging.warning(f'Could not get sl file for offer {copy.offer.name}')
+            if sl_file:
+                sl_file_content = self.get_copy_file_content(sl_file)
+            else:
+                logging.warning(f'Could not get sl file for offer {copy.offer.name}')
+                sl_file_content = ''
+
+            return lift_file_content, sl_file_content
+
+        except Exception:
+            logging.exception(f'Error while receiving lift files for copy {str(copy)}')
+            return None, None
+
+    def get_copy_file_content(self, copy_file):
+        copy_file_content = google_services.GoogleDrive.get_file_content(copy_file)
+        if not copy_file_content:
+            logging.warning(f'Could not receive content of file {copy_file}')
+            return ''
+
+    def save_copy_files(self, lift_file_content, sl_file_content, path_to_domain_results, str_copy, is_priority):
+        os.makedirs(path_to_domain_results, exist_ok=True)
+        self.save_lift_file(lift_file_content, path_to_domain_results, str_copy, is_priority)
+        self.save_sl_file(sl_file_content, path_to_domain_results, str_copy, is_priority)
+
+    #     try:
+    #
+    #         lift_file, sl_file = copy.offer.get_copy_files(copy.lift_number)
+    #
+    #         if lift_file:
+    #             self.save_lift_file(lift_file, path_to_domain_results, str(copy))
+    #         else:
+    #             logging.warning(f'Could not get copy file for offer {copy.offer.name}')
+    #
+    #         if sl_file:
+    #             self.save_sl_file(sl_file, path_to_domain_results, str(copy))
+    #         else:
+    #             logging.warning(f'Could not get sl file for offer {copy.offer.name}')
+    #
+    #     except Exception:
+    #         logging.exception(f'Error while saving lift files for copy {str(copy)}')
 
     @staticmethod
-    def save_lift_file(copy_file, path_to_domain_results, str_copy):
+    def save_lift_file(lift_file_content, path_to_domain_results, str_copy, is_priority):
         try:
-            copy_file_content = google_services.GoogleDrive.get_file_content(copy_file)
-            if not copy_file_content:
-                logging.warning(f'Could nor receive content of file {copy_file}')
-                return
-
             path = path_to_domain_results + f'{str_copy}.html'
             with open(path, 'w', encoding='utf-8') as file:
-                file.write(copy_file_content)
+                file.write(lift_file_content)
                 logging.info(f'Successfully saved Copy file for {str_copy}')
 
         except Exception:
-            logging.exception(f'Error while saving copy file {copy_file} for {str_copy}')
+            logging.exception(f'Error while saving lift file for {str_copy}')
 
     @staticmethod
-    def save_sl_file(sl_file, path_to_domain_results, str_copy):
+    def save_sl_file(sl_file_content, path_to_domain_results, str_copy, is_priority):
         try:
-            sl_file_content = google_services.GoogleDrive.get_file_content(sl_file)
-            if not sl_file_content:
-                logging.warning(f'Could nor receive content of file {sl_file}')
-                return
-
             path_to_sls_file = path_to_domain_results + 'SLs.txt'
             try:
                 with open(path_to_sls_file, 'r', encoding='utf-8') as file:
@@ -374,7 +405,7 @@ class Domain(DomainGoogleSheetsHelper):
 
             with open(path_to_sls_file, 'a', encoding='utf-8') as file:
                 file.write(copy_sls)
-                logging.info(f'Successfully saved add sls for {str_copy} in SLs.txt file')
+                logging.info(f'Successfully saved add sls for {str_copy} in SLs.txt')
 
         except Exception:
-            logging.exception(f'Error while saving sl file {sl_file} for {str_copy}')
+            logging.exception(f'Error while adding sls for {str_copy} in SLs.txt')

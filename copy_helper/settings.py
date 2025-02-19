@@ -14,8 +14,8 @@ class GeneralSettings:
     parent_folder_id: str
     result_directory: str
     domains_short_names: dict
-    clear_old_copies: bool
     machine_id: str
+    priority_products_table_id: str
 
     @classmethod
     def set_settings(cls):
@@ -25,12 +25,12 @@ class GeneralSettings:
         settings_dict = cls.parse_general_setting_file(general_setting_path)
         cls.validate_settings_dict(settings_dict)
 
-        cls.broadcast_id = settings_dict.get("Broadcast")
-        cls.parent_folder_id = settings_dict.get("FolderWithPartners")
-        cls.result_directory = settings_dict.get("DirectoryToStoreResults")
-        cls.domains_short_names = settings_dict.get("DomainsShortNames")
-        cls.clear_old_copies = True if settings_dict.get('ClearOldCopies') == 'yes' else False
+        cls.broadcast_id = settings_dict["Broadcast"]
+        cls.parent_folder_id = settings_dict["FolderWithPartners"]
+        cls.result_directory = settings_dict["DirectoryToStoreResults"]
+        cls.domains_short_names = settings_dict["DomainsShortNames"]
         cls.machine_id = cls.get_unique_machine_id()
+        cls.priority_products_table_id = settings_dict['PriorityProductsTableId']
 
     @staticmethod
     def get_unique_machine_id():
