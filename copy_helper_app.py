@@ -10,6 +10,7 @@ import sys
 import os
 import shutil
 import git
+import os
 
 # logging.root =
 logging.basicConfig(
@@ -147,19 +148,20 @@ def main_page():
             cprint(domain, copies)
 
             path_to_domain_results = copy_helper.settings.GeneralSettings.result_directory + f'/{date.replace('/', '.')}/{domain.name}/'
+            os.makedirs(path_to_domain_results, exist_ok=True)
 
             for copy in copies:
-                domain.save_copy_files(copy, path_to_domain_results)
 
-                # cprint(copy_file, sl_file)
+                # Domain.get_and_save_files(domain_name, date, str_copy)
 
-            #     process_copy(copy, domain)
+                try:
+                    domain.save_copy_files(copy, path_to_domain_results)
+                except Exception:
+                    logging.exception(f'Error while saving lift files for copy {str(copy)}')
 
         case 'apply-styles':
             pass
 
-
-import os
 
 if __name__ == "__main__":
 

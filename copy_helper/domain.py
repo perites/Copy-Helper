@@ -329,7 +329,7 @@ class Domain(DomainGoogleSheetsHelper):
             logging.warning(f'Could not get copy file for offer {copy.offer.name}')
 
         if sl_file:
-            self.get_and_save_files(sl_file, path_to_domain_results, str(copy))
+            self.save_sl_file(sl_file, path_to_domain_results, str(copy))
         else:
             logging.warning(f'Could not get sl file for offer {copy.offer.name}')
 
@@ -342,8 +342,9 @@ class Domain(DomainGoogleSheetsHelper):
                 return
 
             path = path_to_domain_results + f'{str_copy}.html'
-            with open(path, 'r', encoding='utf-8') as file:
-                file.write(copy_file)
+            with open(path, 'w', encoding='utf-8') as file:
+                file.write(copy_file_content)
+                logging.info(f'Successfully saved Copy file for {str_copy}')
 
         except Exception:
             logging.exception(f'Error while saving copy file {copy_file} for {str_copy}')
@@ -356,25 +357,24 @@ class Domain(DomainGoogleSheetsHelper):
                 logging.warning(f'Could nor receive content of file {sl_file}')
                 return
 
-            path_to_sls_file = f'{path_to_domain_results}/SLs.txt'
+            path_to_sls_file = path_to_domain_results + 'SLs.txt'
             try:
                 with open(path_to_sls_file, 'r', encoding='utf-8') as file:
                     sls_file_content = file.read()
 
-                    print(sls_file_content)
-
                     if str_copy in sls_file_content:
+                        logging.info(f'Did not add sls for {str_copy} in SLs.txt file as it already have them')
                         return
 
             except FileNotFoundError:
                 pass
 
-            copy_sls = (f'{str_copy}\n----------------------------------------\n' + sl_file_content +
-                        "\n----------------------------------------\n\n\n")
+            copy_sls = (f'{str_copy}\n----------------------------------------\n\n' + sl_file_content +
+                        "\n\n----------------------------------------\n\n\n")
 
             with open(path_to_sls_file, 'a', encoding='utf-8') as file:
                 file.write(copy_sls)
-
+                logging.info(f'Successfully saved add sls for {str_copy} in SLs.txt file')
 
         except Exception:
             logging.exception(f'Error while saving sl file {sl_file} for {str_copy}')

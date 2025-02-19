@@ -113,7 +113,7 @@ class Offer(OfferGoogleDriveHelper):
                          _tracking_ids=offer_info['tracking_ids']
                          )
 
-    def get_lift_files(self, lift_number):
+    def get_copy_files(self, lift_number):
         return self._get_copy_files(self.name, self.info.google_drive_folder_id, lift_number)
 
     @staticmethod
