@@ -94,9 +94,9 @@ class GeneralSettings:
             return
 
         settings_folder_path = os.path.dirname(GENERAL_SETTINGS_PATH)
-        domains_folder_path = settings_folder_path + '/Domains'
-        os.makedirs(domains_folder_path, exist_ok=True)
-        tools.write_json_file(domains_folder_path + f'/{domain_name}', {
+        domain_folder_path = settings_folder_path + f'/Domains/{domain_name}/'
+        os.makedirs(domain_folder_path, exist_ok=True)
+        tools.write_json_file(domain_folder_path + f'settings.json', {
             "Name": f"{domain_name}",
             "PageInBroadcast": "",
             "AntiSpam": False,
@@ -114,6 +114,12 @@ class GeneralSettings:
                 "FontFamily": "Tahoma"
             }
         })
+
+        with open(domain_folder_path + 'template.html', 'w', encoding='utf-8') as file:
+            file.write(
+                'put html template design here <br> put <<<-COPY_HERE->>> where copy need to be <br> put <<<-PRIORITY_FOOTER_HERE->>> where priority footer will be')
+
+        logging.info(f'Created new domain {domain_name}')
 
     @staticmethod
     def get_unique_machine_id():

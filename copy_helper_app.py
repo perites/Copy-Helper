@@ -32,7 +32,7 @@ def cinput(hint=''):
 
 def main_page():
     cprint('Type what you want to do:')
-    cprint('make-domain,add-domain, exit')
+    cprint('make-domain | add-domain | exit')
     action = cinput().strip()
     match action:
         case 'exit':
