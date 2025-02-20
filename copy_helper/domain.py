@@ -213,19 +213,42 @@ class DomainGoogleSheetsHelper(google_services.GoogleSheets):
         if priority_link_info:
             match priority_link_info['Type']:
                 case 'VolumeGreen':
-                    id = cls.get_data_from_range(priority_products_table_id, f'{page}!E{priority_product_index}')[0][0]
-
-                    url = priority_link_info['Start'] + id + priority_link_info['End']
+                    id = cls.get_data_from_range(priority_products_table_id, f'{page}!E{priority_product_index}')
+                    if not id:
+                        logging.warning('VolumeGreen was not found in priority table, using default link')
+                        url = cls.get_data_from_range(priority_products_table_id, f'{page}!F{priority_product_index}')
+                        if not url:
+                            logging.warning('Url not found')
+                            url =  ''
+                        else:
+                            url = url[0][0]
+                    else:
+                        url = priority_link_info['Start'] + id[0][0] + priority_link_info['End']
 
                 case None:
-                    url = cls.get_data_from_range(priority_products_table_id, f'{page}!F{priority_product_index}')[0][0]
+                    url = cls.get_data_from_range(priority_products_table_id, f'{page}!F{priority_product_index}')
+                    if not url:
+                        logging.warning('Url not found')
+                        url =  ''
+                    else:
+                        url = url[0][0]
 
                 case _:
                     logging.warning('Unsupported priority link type, returning regular url')
-                    url = cls.get_data_from_range(priority_products_table_id, f'{page}!F{priority_product_index}')[0][0]
+                    url = cls.get_data_from_range(priority_products_table_id, f'{page}!F{priority_product_index}')
+                    if not url:
+                        logging.warning('Url not found')
+                        url =  ''
+                    else:
+                        url = url[0][0]
 
         else:
-            url = cls.get_data_from_range(priority_products_table_id, f'{page}!F{priority_product_index}')[0][0]
+            url = cls.get_data_from_range(priority_products_table_id, f'{page}!F{priority_product_index}')
+            if not url:
+                logging.warning('Url not found')
+                url =  ''
+            else:
+                url = url[0][0]
 
         return text_value, url
 
