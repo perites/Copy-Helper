@@ -117,15 +117,16 @@ def cinput(hint=''):
 def main_page():
     cprint('Type what you want to do:')
     cprint('make-domain, apply-styles, exit')
-    action = cinput().strip()
+    # action = cinput().strip()
+    action = 'md'
     match action:
         case 'exit':
             exit()
 
         case 'make-domain' | 'md':
             cprint('To make domain, enter <domain-name>(full name or abbreviate) <date>(same as column in broadcast)')
-            domain_name, date = cinput().split(' ')
-
+            # domain_name, date = cinput().split(' ')
+            domain_name, date = 'WFR', '2/17'
             domain_name = copy_helper.settings.GeneralSettings.domains_short_names.get(domain_name)
             if not domain_name:
                 cprint('Did not found that abbreviate in settings')
@@ -136,8 +137,8 @@ def main_page():
                     f'Cant find that domain, ensure that you entering name correctly and {domain_name} in Settings/Domains')
                 raise Exception
 
-            copies = domain.get_copies(date)
-            copies = None
+            # copies = domain.get_copies(date)
+            copies = ['BTUA7']
             if not copies:
                 cprint(
                     'Copies were not found for some reason, you can enter them manually (separated by space as in brodcast) or just press enter to return to begining')

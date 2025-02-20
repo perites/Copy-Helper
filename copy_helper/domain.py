@@ -130,7 +130,7 @@ class DomainStylesHelper:
 
     @classmethod
     def change_links_color(cls, html_copy, link_color):
-        a_tag_pattern = r'<\ba\b[\S\s]*?>'
+        a_tag_pattern = r'<a\s+([^>]*)'
 
         for old_a_tag in re.findall(a_tag_pattern, html_copy):
             new_a_tag = cls.change_link_color(link_color, old_a_tag)
@@ -140,9 +140,9 @@ class DomainStylesHelper:
 
     @staticmethod
     def change_link_color(link_color, a_tag):
-        link_style = re.findall(r'style=".*?"', a_tag)
+        link_style = re.findall(r'style="([^"]*)"', a_tag)
         if link_style:
-            old_link_style = link_style[0].split('"')[1]
+            old_link_style = link_style[0]
             new_link_style, success = tools.RegExHelper.regex_replace('Color', old_link_style,
                                                                       f'color: {link_color};')
             if not success:
@@ -153,7 +153,7 @@ class DomainStylesHelper:
 
         else:
             old_link_style = ' '
-            new_link_style = f'style="color: {link_color};"'
+            new_link_style = f' style="color: {link_color};"'
 
         new_a_tag, _ = tools.RegExHelper.regex_replace(old_link_style, a_tag, new_link_style)
 
@@ -244,7 +244,7 @@ class Domain:
                 return tools.read_json_file(f'{path_to_domain}/settings.json')
 
             case 'template':
-                with open('path_to_domain}/template.html', 'r', encoding='utf-8') as file:
+                with open(f'{path_to_domain}/template.html', 'r', encoding='utf-8') as file:
                     return file.read()
 
     def get_copies(self, date):
