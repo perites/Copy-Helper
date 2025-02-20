@@ -137,6 +137,7 @@ def main_page():
                 raise Exception
 
             copies = domain.get_copies(date)
+            copies = None
             if not copies:
                 cprint(
                     'Copies were not found for some reason, you can enter them manually (separated by space as in brodcast) or just press enter to return to begining')
@@ -157,10 +158,10 @@ def main_page():
                     priority_footer_block = domain.anti_spam_text(priority_footer_block)
                     sl_file_content = domain.anti_spam_text(sl_file_content)
 
-                # lift_file_content = domain.add_template(lift_file_content, priority_footer_block)
+                lift_file_content = domain.add_template(lift_file_content, priority_footer_block)
 
                 tracking_link = domain.make_tracking_link(copy)
-                lift_file_content = domain.lift_add_link(tracking_link, lift_file_content)
+                lift_file_content = domain.add_link_to_lift(tracking_link, lift_file_content)
 
                 domain.save_copy_files(lift_file_content, sl_file_content, path_to_domain_results, str(copy),
                                        bool(priority_footer_block), tracking_link)

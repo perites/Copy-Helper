@@ -37,6 +37,7 @@ class DomainStylesHelper:
         self.font_size = styles_settings['FontSize']
         self.side_padding = styles_settings['SidePadding']
         self.upper_down_padding = styles_settings['UpperDownPadding']
+        self.add_after_priority_block = styles_settings['AddAfterPriorityBlock']
 
     def make_priority_footer_html(self, footer_text, url):
         footer_link_keywords = [
@@ -243,7 +244,8 @@ class Domain:
                 return tools.read_json_file(f'{path_to_domain}/settings.json')
 
             case 'template':
-                return tools.read_json_file(f'{path_to_domain}/template.html')
+                with open('path_to_domain}/template.html', 'r', encoding='utf-8') as file:
+                    return file.read()
 
     def get_copies(self, date):
         return self.gsh_helper.get_copies(self.name, self.settings.page, date)
@@ -260,20 +262,19 @@ class Domain:
         return self.styles_helper.antispam_text(text)
 
     @staticmethod
-    def lift_add_link(tracking_link, lift_copy_html):
+    def add_link_to_lift(tracking_link, lift_copy_html):
         return lift_copy_html.replace('urlhere', tracking_link)
 
-    @classmethod
-    def add_template(cls, name, html_copy, priority_block):
-        template = tools.FileHelper.read_file(f'Settings/Domains/{name}/template.html')
+    def add_template(self, html_copy, priority_block):
+        template = self.get_file_data('template')
 
         if not template:
-            return
+            return html_copy + "\n\n\n" + priority_block
 
-        done_template = template.replace('<<<-COPY_HERE->>>', html_copy)
+        template = template.replace('<<<-COPY_HERE->>>', html_copy)
 
-        done_template = done_template.replace('<<<-PRIORITY_FOOTER_HERE->>>',
-                                              priority_block + "<br><br>" if priority_block else "")
+        done_template = template.replace('<<<-PRIORITY_FOOTER_HERE->>>',
+                                         priority_block + self.styles_helper.add_after_priority_block if priority_block else "")
 
         return done_template
 
