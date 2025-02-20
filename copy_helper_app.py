@@ -139,7 +139,7 @@ def main_page():
             copies = domain.get_copies(date)
             if not copies:
                 cprint(
-                    'Copies were not found for some reason, you can enter them manually or just press enter to return to begining')
+                    'Copies were not found for some reason, you can enter them manually (separated by space as in brodcast) or just press enter to return to begining')
                 copies = cinput().split(' ')
 
             copies = list(filter(lambda copy: copy, map(copy_helper.Copy.create, copies)))
@@ -150,12 +150,10 @@ def main_page():
             for copy in copies:
                 lift_file_content, sl_file_content = domain.get_copy_files_content(copy)
                 tracking_link = domain.make_tracking_link(copy)
-                print(tracking_link)
-                priority_footer_block, is_priority = domain.make_priority_block(copy.offer.name)
-
-                print(priority_footer_block, is_priority)
+                priority_footer_block = domain.make_priority_block(copy.offer.name)
+                
                 domain.save_copy_files(lift_file_content, sl_file_content, path_to_domain_results, str(copy),
-                                       is_priority)
+                                       bool(priority_footer_block))
 
         case 'apply-styles':
             pass

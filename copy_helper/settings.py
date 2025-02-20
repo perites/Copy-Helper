@@ -18,17 +18,18 @@ class GeneralSettings:
 
     @classmethod
     def set_settings(cls):
-        logging.info('Setting up setting')
-        general_setting_path = 'Settings/General-Setting.json'
+        logging.info('Parsing settings')
+        general_setting_path = 'Settings/General-Settings.json'
 
         settings_dict = tools.read_json_file(general_setting_path)
 
-        cls.broadcast_id = settings_dict["Broadcast"]
+        cls.broadcast_id = settings_dict["YourTeamBroadcastSheetID"]
         cls.parent_folder_id = settings_dict["FolderWithPartners"]
         cls.result_directory = settings_dict["DirectoryToStoreResults"]
         cls.domains_short_names = settings_dict["DomainsShortNames"]
-        cls.machine_id = cls.get_unique_machine_id()
         cls.priority_products_table_id = settings_dict['PriorityProductsTableId']
+
+        cls.machine_id = cls.get_unique_machine_id()
 
     @staticmethod
     def get_unique_machine_id():

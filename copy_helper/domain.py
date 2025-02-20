@@ -22,17 +22,39 @@ class DomainSettings:
         return cls(
             page=domain_info['PageInBroadcast'],
             tracking_link_info=domain_info['TrackingLinkInfo'],
-            priority_link_info=domain_info['PriorityLinkInfo'],
+            priority_link_info=domain_info['CustomPriorityUnsubLinkInfo'],
             styles_settings=domain_info['StylesSettings']
         )
 
 
 class DomainStylesHelper:
     def __init__(self, styles_settings):
-        self.priority_footer_url_style = styles_settings['PriorityFooterUrlStyle']
+        self.priority_footer_url_template = styles_settings['PriorityFooterUrlTemplate']
 
     def make_priority_footer_html(self, footer_text, url):
-        return "FOOTER_HTML"
+        footer_link_keywords = [
+            'edit your e-mail notification preferences or unsubscribe',
+            'Privacy Policy',
+            'unsubscribe here',
+            'unsubscribe',
+            'click here',
+        ]
+
+        for keyword in footer_link_keywords:
+            if keyword in footer_text:
+                unsub_footer_url = self.priority_footer_url_template
+
+                unsub_footer_url = unsub_footer_url.replace('PRIORITY_FOOTER_URL', url)
+                unsub_footer_url = unsub_footer_url.replace('PRIORITY_FOOTER_TEXT_URL', keyword)
+
+                priority_block = footer_text.replace(keyword, unsub_footer_url)
+                priority_block = priority_block.replace('\n', '<br>')
+                return priority_block
+
+        logging.warning(f'No keyword was found in {footer_text}')
+        footer_text = footer_text.repalace('\n', '<br>')
+        footer_text += f'\nUNSUB-URL: {url}'
+        return footer_text
 
 
 class DomainGoogleSheetsHelper(google_services.GoogleSheets):
@@ -109,10 +131,7 @@ class Domain:
         path_to_domain = f'Settings/Domains/{self.name}'
         match file_name:
             case 'settings':
-                return tools.read_json_file(f'{path_to_domain}/general.json')
-
-            case 'styles':
-                return tools.read_json_file(f'{path_to_domain}/styles.json')
+                return tools.read_json_file(f'{path_to_domain}/settings.json')
 
             case 'template':
                 return tools.read_json_file(f'{path_to_domain}/template.html')
@@ -123,7 +142,7 @@ class Domain:
     @classmethod
     def apply_styles(cls, name, html_copy, priority_block):
 
-        default_style_settings = tools.FileHelper.read_json_data(f'Settings/General-Setting.json').get('DefaultStyles')
+        default_style_settings = tools.FileHelper.read_json_data(f'Settings/General-Settings.json').get('DefaultStyles')
         user_domain_styles_settings = tools.FileHelper.read_json_data(f'Settings/Domains/{name}/styles.json')
 
         domain_styles_settings = default_style_settings
@@ -151,7 +170,7 @@ class Domain:
         #     if priority_block_url_text:
         #         priority_block_text += f'<br>{priority_block_url_text}'
 
-        domain_general_settings = tools.FileHelper.read_json_data(f'Settings/Domains/{name}/general.json')
+        domain_general_settings = tools.FileHelper.read_json_data(f'Settings/Domains/{name}/settings.json')
         if domain_general_settings['AntiSpam'] == 'yes':
             html_copy = cls.anti_spam_text(html_copy)
 
@@ -183,7 +202,8 @@ class Domain:
             '%': '％',
             '$': '＄',
         }
-        user_replacements = tools.FileHelper.read_json_data('Settings/General-Setting.json').get('AntiSpamReplacements')
+        user_replacements = tools.FileHelper.read_json_data('Settings/General-Settings.json').get(
+            'AntiSpamReplacements')
         replacements = {**default_replacements, **user_replacements}
 
         new_text = ''
@@ -270,7 +290,7 @@ class Domain:
         return done_template
 
     # def make_links(self, copy):
-    #     # domain_settings = tools.FileHelper.read_json_data(f'Settings/Domains/{name}/general.json')
+    #     # domain_settings = tools.FileHelper.read_json_data(f'Settings/Domains/{name}/settings.json')
     #     # offer_name, lift_number, img_code = tools.RegExHelper.match_str_copy(str_copy)
     #
     #     tracking_link = cls.make_tracking_link(domain_settings['TrackingLink'], offer_name, lift_number, img_code)
@@ -306,8 +326,13 @@ class Domain:
 
     def make_priority_block(self, offer_name):
         footer_text, url = self.gsh_helper.get_priority_footer_values(offer_name, self.settings.priority_link_info)
-        priority_footer_html = self.styles_helper.make_priority_footer_html(footer_text, url)
-        return priority_footer_html, bool(footer_text)
+        if footer_text:
+            logging.info(f'Priority footer was found for {offer_name}')
+            priority_footer_html = self.styles_helper.make_priority_footer_html(footer_text, url)
+            return priority_footer_html
+        else:
+            logging.info(f'No priority footer text was found for {offer_name}')
+            return None
 
         # return cls.make_priority_block(text_value, url)
 
