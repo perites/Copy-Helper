@@ -3,9 +3,6 @@ import logging
 
 import os
 
-from io import BytesIO
-from docx import Document
-
 import re
 
 
@@ -16,15 +13,9 @@ def read_json_file(path):
 
 
 def write_json_file(path, data):
+    logging.debug(f'Writing to {path}')
     with open(path, 'w') as file:
         json.dump(data, file, indent=4)
-
-
-def extract_text_from_docx(binary_data):
-    doc_file = BytesIO(binary_data)
-    doc = Document(doc_file)
-    text = "\n".join([para.text for para in doc.paragraphs])
-    return text
 
 
 class FileHelper:

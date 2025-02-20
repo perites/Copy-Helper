@@ -30,6 +30,11 @@ class DomainSettings:
 class DomainStylesHelper:
     def __init__(self, styles_settings):
         self.priority_footer_url_template = styles_settings['PriorityFooterUrlTemplate']
+        self.links_color = styles_settings['LinksColor']
+        self.font_family = styles_settings['FontFamily']
+        self.font_size = styles_settings['FontSize']
+        self.side_padding = styles_settings['SidePadding']
+        self.upper_down_padding = styles_settings['UpperDownPadding']
 
     def make_priority_footer_html(self, footer_text, url):
         footer_link_keywords = [
@@ -55,6 +60,69 @@ class DomainStylesHelper:
         footer_text = footer_text.repalace('\n', '<br>')
         footer_text += f'\nUNSUB-URL: {url}'
         return footer_text
+
+    def apply_styles(self, lift_html):
+        lift_html = self.change_links_color(lift_html, self.links_color)
+
+        lift_html, success = self.replace_style('FontFamily', f'font-family:{self.font_family};', lift_html)
+        if not success:
+            lift_html = lift_html.replace('Roboto', self.font_family)
+
+        lift_html, success = self.replace_style('FontSize', f'font-size: {self.font_size};', lift_html)
+
+        html_copy = lift_html.replace('padding:10px 25px', f'padding:10px {self.side_padding}')
+        html_copy = html_copy.replace('padding:20px 0', f'padding:{self.upper_down_padding} 0')
+        html_copy = html_copy.replace('padding:10px 0', f'padding:{self.upper_down_padding} 0')
+
+        return html_copy
+
+    @staticmethod
+    def replace_style(style_name, new_value, lift_html):
+
+        style_name_to_reqex = {'FontFamily': r'font-family\s*:\s*([^;]+);?',
+                               'FontSize': r'font-size\s*:\s*(16|18)?px;',
+                               'Color': r'color\s*:\s*([^;]+);?'}
+
+        style_pattern = style_name_to_reqex[style_name]
+
+        pattern = re.compile(style_pattern)
+        if not pattern.search(lift_html):
+            return lift_html, False
+
+        new_lift_html = pattern.sub(lambda match: new_value, lift_html)
+
+        return new_lift_html, True
+
+    @classmethod
+    def change_links_color(cls, html_copy, link_color):
+        a_tag_pattern = r'<\ba\b[\S\s]*?>'
+
+        for old_a_tag in re.findall(a_tag_pattern, html_copy):
+            new_a_tag = cls.change_link_color(link_color, old_a_tag)
+            html_copy = html_copy.replace(old_a_tag, new_a_tag)
+
+        return html_copy
+
+    @staticmethod
+    def change_link_color(link_color, a_tag):
+        link_style = re.findall(r'style=".*?"', a_tag)
+        if link_style:
+            old_link_style = link_style[0].split('"')[1]
+            new_link_style, success = tools.RegExHelper.regex_replace('Color', old_link_style,
+                                                                      f'color: {link_color};')
+            if not success:
+                link_styles_list = old_link_style.split(';')
+                link_styles_list.append(f'color: {link_color};')
+                link_styles_list = list(filter(lambda el: el, link_styles_list))
+                new_link_style = '; '.join(link_styles_list)
+
+        else:
+            old_link_style = ' '
+            new_link_style = f'style="color: {link_color};"'
+
+        new_a_tag, _ = tools.RegExHelper.regex_replace(old_link_style, a_tag, new_link_style)
+
+        return new_a_tag
 
 
 class DomainGoogleSheetsHelper(google_services.GoogleSheets):
@@ -125,7 +193,11 @@ class Domain:
         self.name = domain_name
         self.settings = DomainSettings.create_from_dict(self.get_file_data('settings'))
         self.gsh_helper = DomainGoogleSheetsHelper()
-        self.styles_helper = DomainStylesHelper(self.settings.styles_settings)
+
+        default_style_settings = settings.GeneralSettings.default_style_settings
+        user_domain_styles_settings = self.settings.styles_settings
+
+        self.styles_helper = DomainStylesHelper({**default_style_settings, **user_domain_styles_settings})
 
     def get_file_data(self, file_name):
         path_to_domain = f'Settings/Domains/{self.name}'
@@ -139,43 +211,19 @@ class Domain:
     def get_copies(self, date):
         return self.gsh_helper.get_copies(self.name, self.settings.page, date)
 
-    @classmethod
-    def apply_styles(cls, name, html_copy, priority_block):
+    def apply_styles(self, lift_file_html):
+        logging.info('Applying styles to copy')
+        if not lift_file_html:
+            logging.warning('Got nothing as lift file html')
+            return ''
 
-        default_style_settings = tools.FileHelper.read_json_data(f'Settings/General-Settings.json').get('DefaultStyles')
-        user_domain_styles_settings = tools.FileHelper.read_json_data(f'Settings/Domains/{name}/styles.json')
+        return self.styles_helper.apply_styles(lift_file_html)
 
-        domain_styles_settings = default_style_settings
-        if user_domain_styles_settings:
-            domain_styles_settings = {**default_style_settings, **user_domain_styles_settings}
-
-        html_copy = cls.change_links_color(html_copy, domain_styles_settings['LinkColor'])
-        html_copy, success = tools.RegExHelper.regex_replace('FontFamily', html_copy,
-                                                             f'font-family:{domain_styles_settings['FontFamily']};')
-        if not success:
-            html_copy = html_copy.replace('Roboto', domain_styles_settings['FontFamily'])
-
-        html_copy, success = tools.RegExHelper.regex_replace('FontSize', html_copy,
-                                                             f'font-size: {domain_styles_settings['FontSize']};')
-
-        html_copy = html_copy.replace('padding:10px 25px', f'padding:10px {domain_styles_settings['LeftRightPadding']}')
-        html_copy = html_copy.replace('padding:20px 0', f'padding:{domain_styles_settings['UpperDownPadding']} 0')
-
-        # priority_block_text = ''
-        # if priority_block[0]:
-        #     priority_block_text, priority_block_url = priority_block[0], priority_block[1]
-        #
-        #     priority_block_url_text = domain_styles_settings['PriorityFooterUrl'].replace('PRIORITY_FOOTER_URL',
-        #                                                                                   priority_block_url)
-        #     if priority_block_url_text:
-        #         priority_block_text += f'<br>{priority_block_url_text}'
-
-        domain_general_settings = tools.FileHelper.read_json_data(f'Settings/Domains/{name}/settings.json')
-        if domain_general_settings['AntiSpam'] == 'yes':
-            html_copy = cls.anti_spam_text(html_copy)
-
-        html_copy = cls.add_template(name, html_copy, priority_block)
-        return html_copy
+    # domain_general_settings = tools.FileHelper.read_json_data(f'Settings/Domains/{name}/settings.json')
+    # if domain_general_settings['AntiSpam'] == 'yes':
+    #     html_copy = cls.anti_spam_text(html_copy)
+    #
+    # html_copy = cls.add_template(name, html_copy, priority_block)
 
     @staticmethod
     def anti_spam_text(text):
@@ -244,37 +292,6 @@ class Domain:
         #
         # replaced_char = char
 
-    @staticmethod
-    def change_link_color(link_color, a_tag):
-        link_style = re.findall(r'style=".*?"', a_tag)
-        if link_style:
-            old_link_style = link_style[0].split('"')[1]
-            new_link_style, success = tools.RegExHelper.regex_replace('Color', old_link_style,
-                                                                      f'color: {link_color};')
-            if not success:
-                link_styles_list = old_link_style.split(';')
-                link_styles_list.append(f'color: {link_color};')
-                link_styles_list = list(filter(lambda el: el, link_styles_list))
-                new_link_style = '; '.join(link_styles_list)
-
-        else:
-            old_link_style = ' '
-            new_link_style = f'style="color: {link_color};"'
-
-        new_a_tag, _ = tools.RegExHelper.regex_replace(old_link_style, a_tag, new_link_style)
-
-        return new_a_tag
-
-    @classmethod
-    def change_links_color(cls, html_copy, link_color):
-        a_tag_pattern = r'<\ba\b[\S\s]*?>'
-
-        for old_a_tag in re.findall(a_tag_pattern, html_copy):
-            new_a_tag = cls.change_link_color(link_color, old_a_tag)
-            html_copy = html_copy.replace(old_a_tag, new_a_tag)
-
-        return html_copy
-
     @classmethod
     def add_template(cls, name, html_copy, priority_block):
         template = tools.FileHelper.read_file(f'Settings/Domains/{name}/template.html')
@@ -288,15 +305,6 @@ class Domain:
                                               priority_block + "<br><br>" if priority_block else "")
 
         return done_template
-
-    # def make_links(self, copy):
-    #     # domain_settings = tools.FileHelper.read_json_data(f'Settings/Domains/{name}/settings.json')
-    #     # offer_name, lift_number, img_code = tools.RegExHelper.match_str_copy(str_copy)
-    #
-    #     tracking_link = cls.make_tracking_link(domain_settings['TrackingLink'], offer_name, lift_number, img_code)
-    #     priority_block = cls.get_priority_block(domain_settings['PriorityLink'], offer_name)
-    #
-    #     return tracking_link, priority_block
 
     def make_tracking_link(self, copy):
         try:
@@ -333,35 +341,6 @@ class Domain:
         else:
             logging.info(f'No priority footer text was found for {offer_name}')
             return None
-
-        # return cls.make_priority_block(text_value, url)
-
-    # @classmethod
-    # def make_priority_block(cls, text_value: str, url):
-    #     footer_link_keywords = [
-    #         'edit your e-mail notification preferences or unsubscribe',
-    #         'Privacy Policy',
-    #         'unsubscribe here',
-    #         'unsubscribe',
-    #         'click here',
-    #     ]
-    #
-    #     for keyword in footer_link_keywords:
-    #         if keyword in text_value:
-    #             style_url = tools.FileHelper.read_json_data('Settings/Domains/WorldFinReport.com/styles.json')[
-    #                 'PriorityFooterUrl']
-    #
-    #             # print(url, 'before')
-    #
-    #             style_url = style_url.replace('PRIORITY_FOOTER_URL', url)
-    #             style_url = style_url.replace('PRIORITY_FOOTER_TEXT_URL', keyword)
-    #             # print(url, 'afret')
-    #             priority_block = text_value.replace(keyword, style_url)
-    #             priority_block = priority_block.replace('\n', '<br>')
-    #             return priority_block
-    #
-    #     logging.warning(f'No keyword was found in {text_value}')
-    #     return ''
 
     def get_copy_files_content(self, copy):
         try:
@@ -405,23 +384,6 @@ class Domain:
             self.save_sl_file(sl_file_content, path_to_domain_results, str_copy, is_priority)
         else:
             logging.warning('Got no sl file content, not saving')
-
-    #     try:
-    #
-    #         lift_file, sl_file = copy.offer.get_copy_files(copy.lift_number)
-    #
-    #         if lift_file:
-    #             self.save_lift_file(lift_file, path_to_domain_results, str(copy))
-    #         else:
-    #             logging.warning(f'Could not get copy file for offer {copy.offer.name}')
-    #
-    #         if sl_file:
-    #             self.save_sl_file(sl_file, path_to_domain_results, str(copy))
-    #         else:
-    #             logging.warning(f'Could not get sl file for offer {copy.offer.name}')
-    #
-    #     except Exception:
-    #         logging.exception(f'Error while saving lift files for copy {str(copy)}')
 
     @staticmethod
     def save_lift_file(lift_file_content, path_to_domain_results, str_copy, is_priority):

@@ -15,6 +15,7 @@ class GeneralSettings:
     domains_short_names: dict
     machine_id: str
     priority_products_table_id: str
+    default_style_settings: dict
 
     @classmethod
     def set_settings(cls):
@@ -28,7 +29,7 @@ class GeneralSettings:
         cls.result_directory = settings_dict["DirectoryToStoreResults"]
         cls.domains_short_names = settings_dict["DomainsShortNames"]
         cls.priority_products_table_id = settings_dict['PriorityProductsTableId']
-
+        cls.default_style_settings = settings_dict['DefaultStyles']
         cls.machine_id = cls.get_unique_machine_id()
 
     @staticmethod

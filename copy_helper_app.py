@@ -149,9 +149,13 @@ def main_page():
             path_to_domain_results = copy_helper.settings.GeneralSettings.result_directory + f'/{date.replace('/', '.')}/{domain.name}/'
             for copy in copies:
                 lift_file_content, sl_file_content = domain.get_copy_files_content(copy)
+
                 tracking_link = domain.make_tracking_link(copy)
+                lift_file_content = domain.apply_styles(lift_file_content)
+                # lift_file_content = domain.add_link(tracking_link)
+
                 priority_footer_block = domain.make_priority_block(copy.offer.name)
-                
+
                 domain.save_copy_files(lift_file_content, sl_file_content, path_to_domain_results, str(copy),
                                        bool(priority_footer_block))
 

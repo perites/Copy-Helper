@@ -6,8 +6,8 @@ from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 
-from . import exceptions
-from . import settings
+from io import BytesIO
+from docx import Document
 from . import tools
 
 
@@ -107,13 +107,20 @@ class GoogleDrive:
             case 'application/vnd.openxmlformats-officedocument.wordprocessingml.document':
                 request = cls.drive_service.files().get_media(fileId=file_id)
 
-                content = tools.FileHelper.extract_text_from_docx(request.execute())
+                content = cls.extract_text_from_docx(request.execute())
 
             case _:
                 logging.warning(f'Unknown mime_type {mime_type}, returning None')
                 return
 
         return content
+
+    @staticmethod
+    def extract_text_from_docx(binary_data):
+        doc_file = BytesIO(binary_data)
+        doc = Document(doc_file)
+        text = "\n".join([para.text for para in doc.paragraphs])
+        return text
 
 
 class GoogleSheets:
