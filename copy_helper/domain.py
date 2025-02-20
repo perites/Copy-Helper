@@ -58,7 +58,7 @@ class DomainStylesHelper:
                 return priority_block
 
         logging.warning(f'No keyword was found in {footer_text}')
-        footer_text = footer_text.repalace('\n', '<br>')
+        footer_text = footer_text.replace('\n', '<br>')
         footer_text += f'\nUNSUB-URL: {url}'
         return footer_text
 
