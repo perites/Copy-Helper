@@ -217,7 +217,7 @@ class DomainGoogleSheetsHelper(google_services.GoogleSheets):
 
                     url = priority_link_info['Start'] + id + priority_link_info['End']
 
-                case '':
+                case None:
                     url = cls.get_data_from_range(priority_products_table_id, f'{page}!F{priority_product_index}')[0][0]
 
                 case _:
@@ -293,7 +293,7 @@ class Domain:
                                     tracking_link_info[
                                         'End'] + str(copy)
 
-                case 'IT2':
+                case 'VolumeGreen':
                     tracking_link = tracking_link_info['Start'] + copy.offer.info.tracking_id('volume_green') + \
                                     tracking_link_info[
                                         'End'] + f'{copy.offer.info.tracking_id('img_it')}_{copy.lift_number}{copy.img_code}'
