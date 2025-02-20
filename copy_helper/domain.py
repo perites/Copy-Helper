@@ -1,13 +1,11 @@
 import dataclasses
 import logging
+import os
+import re
 
 from . import google_services
 from . import settings
-
 from . import tools
-
-import re
-import os
 
 
 @dataclasses.dataclass
@@ -65,19 +63,25 @@ class DomainStylesHelper:
         return footer_text
 
     def apply_styles(self, lift_html):
-        lift_html = self.change_links_color(lift_html, self.links_color)
+        if self.links_color:
+            lift_html = self.change_links_color(lift_html, self.links_color)
 
-        lift_html, success = self.replace_style('FontFamily', f'font-family:{self.font_family};', lift_html)
-        if not success:
-            lift_html = lift_html.replace('Roboto', self.font_family)
+        if self.font_family:
+            lift_html, success = self.replace_style('FontFamily', f'font-family:{self.font_family};', lift_html)
+            if not success:
+                lift_html = lift_html.replace('Roboto', self.font_family)
 
-        lift_html, success = self.replace_style('FontSize', f'font-size: {self.font_size};', lift_html)
+        if self.font_size:
+            lift_html, success = self.replace_style('FontSize', f'font-size: {self.font_size};', lift_html)
 
-        html_copy = lift_html.replace('padding:10px 25px', f'padding:10px {self.side_padding}')
-        html_copy = html_copy.replace('padding:20px 0', f'padding:{self.upper_down_padding} 0')
-        html_copy = html_copy.replace('padding:10px 0', f'padding:{self.upper_down_padding} 0')
+        if self.side_padding:
+            lift_html = lift_html.replace('padding:10px 25px', f'padding:10px {self.side_padding}')
 
-        return html_copy
+        if self.upper_down_padding:
+            lift_html = lift_html.replace('padding:20px 0', f'padding:{self.upper_down_padding} 0')
+            lift_html = lift_html.replace('padding:10px 0', f'padding:{self.upper_down_padding} 0')
+
+        return lift_html
 
     @staticmethod
     def antispam_text(text):
@@ -112,7 +116,7 @@ class DomainStylesHelper:
         return new_text
 
     @staticmethod
-    def replace_style(style_name, new_value, lift_html):
+    def replace_style(style_name, new_value, source):
 
         style_name_to_reqex = {'FontFamily': r'font-family\s*:\s*([^;]+);?',
                                'FontSize': r'font-size\s*:\s*(16|18)?px;',
@@ -121,10 +125,10 @@ class DomainStylesHelper:
         style_pattern = style_name_to_reqex[style_name]
 
         pattern = re.compile(style_pattern)
-        if not pattern.search(lift_html):
-            return lift_html, False
+        if not pattern.search(source):
+            return source, False
 
-        new_lift_html = pattern.sub(lambda match: new_value, lift_html)
+        new_lift_html = pattern.sub(lambda match: new_value, source)
 
         return new_lift_html, True
 
@@ -138,13 +142,13 @@ class DomainStylesHelper:
 
         return html_copy
 
-    @staticmethod
-    def change_link_color(link_color, a_tag):
+    @classmethod
+    def change_link_color(cls, link_color, a_tag):
         link_style = re.findall(r'style="([^"]*)"', a_tag)
         if link_style:
             old_link_style = link_style[0]
-            new_link_style, success = tools.RegExHelper.regex_replace('Color', old_link_style,
-                                                                      f'color: {link_color};')
+            new_link_style, success = cls.replace_style('Color', f'color: {link_color};', old_link_style)
+
             if not success:
                 link_styles_list = old_link_style.split(';')
                 link_styles_list.append(f'color: {link_color};')
@@ -155,8 +159,7 @@ class DomainStylesHelper:
             old_link_style = ' '
             new_link_style = f' style="color: {link_color};"'
 
-        new_a_tag, _ = tools.RegExHelper.regex_replace(old_link_style, a_tag, new_link_style)
-
+        new_a_tag = a_tag.replace(old_link_style, new_link_style)
         return new_a_tag
 
 

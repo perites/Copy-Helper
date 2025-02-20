@@ -44,13 +44,15 @@ class ServicesHelper:
 
             elif creds.expired and creds.refresh_token:
                 creds.refresh(Request())
-                tools.FileHelper.write_to_file(path_to_credentials, creds.to_json())
+                with open(path_to_credentials, 'w', encoding='utf-8') as file:
+                    file.write(creds.to_json())
                 return creds
 
         flow = InstalledAppFlow.from_client_secrets_file('SystemData/OAuth 2.0 Client ID.json', scopes)
         creds = flow.run_local_server(port=0)
 
-        tools.FileHelper.write_to_file(path_to_credentials, creds.to_json())
+        with open(path_to_credentials, 'w', encoding='utf-8') as file:
+            file.write(creds.to_json())
 
         return creds
 

@@ -1,11 +1,13 @@
+import hashlib
 import logging
-
-from . import tools
+import os
 import platform
 import subprocess
-import hashlib
-import os
 import uuid
+
+from . import tools
+
+GENERAL_SETTINGS_PATH = 'Settings/General-Settings.json'
 
 
 class GeneralSettings:
@@ -20,10 +22,12 @@ class GeneralSettings:
 
     @classmethod
     def set_settings(cls):
-        logging.info('Parsing settings')
-        general_setting_path = 'Settings/General-Settings.json'
+        if not os.path.exists(GENERAL_SETTINGS_PATH):
+            logging.info('Setting Folder was not found, creating new')
+            cls.create_settings()
 
-        settings_dict = tools.read_json_file(general_setting_path)
+        logging.info('Parsing settings')
+        settings_dict = tools.read_json_file(GENERAL_SETTINGS_PATH)
 
         cls.broadcast_id = settings_dict["YourTeamBroadcastSheetID"]
         cls.parent_folder_id = settings_dict["FolderWithPartners"]
@@ -33,6 +37,83 @@ class GeneralSettings:
         cls.default_style_settings = settings_dict['DefaultStyles']
         cls.anti_spam_replacements = settings_dict['AntiSpamReplacements']
         cls.machine_id = cls.get_unique_machine_id()
+
+    @classmethod
+    def create_settings(cls):
+        settings_folder_path = os.path.dirname(GENERAL_SETTINGS_PATH)
+        os.makedirs(settings_folder_path)
+
+        tools.write_json_file(GENERAL_SETTINGS_PATH, {
+            "YourTeamBroadcastSheetID": "",
+            "FolderWithPartners": "1-WFEkKNjVjaJDNt2XKBeJhpIQUviBVim",
+            "PriorityProductsTableId": "1e40khWM1dKTje_vZi4K4fL-RA8-D6jhp2wmZSXurQH0",
+            "DirectoryToStoreResults": "",
+            "DomainsShortNames": {
+                "DOMAIN_ABR": "DomainNameAsInBroadcast"
+            },
+            "DefaultStyles": {
+                "FontSize": "21px",
+                "FontFamily": "Roboto",
+                "LinksColor": "#2402fb",
+                "SidePadding": "30px",
+                "UpperDownPadding": "10px",
+                "AddAfterPriorityBlock": "<br><br>",
+                "PriorityFooterUrlTemplate": "<b><a target=\"_blank\" href=\"PRIORITY_FOOTER_URL\" style=\"text-decoration: underline; color: #ffffff;\">PRIORITY_FOOTER_TEXT_URL</a></b>"
+            },
+            "AntiSpamReplacements": {
+                "A": "А",
+                "E": "Е",
+                "I": "І",
+                "O": "О",
+                "P": "Р",
+                "T": "Т",
+                "H": "Н",
+                "K": "К",
+                "X": "Х",
+                "C": "С",
+                "B": "В",
+                "M": "М",
+                "e": "е",
+                "y": "у",
+                "i": "і",
+                "o": "о",
+                "a": "а",
+                "x": "х",
+                "c": "с",
+                "%": "％",
+                "$": "＄"
+            }
+        })
+
+        cls.create_new_domain()
+
+    @classmethod
+    def create_new_domain(cls, domain_name='DomainNameAsInBroadcast'):
+        if not domain_name:
+            logging.warning('DomainName cant be empty')
+            return
+
+        settings_folder_path = os.path.dirname(GENERAL_SETTINGS_PATH)
+        domains_folder_path = settings_folder_path + '/Domains'
+        os.makedirs(domains_folder_path, exist_ok=True)
+        tools.write_json_file(domains_folder_path + f'/{domain_name}', {
+            "Name": f"{domain_name}",
+            "PageInBroadcast": "",
+            "AntiSpam": False,
+            "TrackingLinkInfo": {
+                "Type": "",
+                "Start": "",
+                "End": ""
+            },
+            "CustomPriorityUnsubLinkInfo": {
+                "Type": "",
+                "Start": "",
+                "End": ""
+            },
+            "StylesSettings": {
+                "FontFamily": "Tahoma"
+            }
+        })
 
     @staticmethod
     def get_unique_machine_id():

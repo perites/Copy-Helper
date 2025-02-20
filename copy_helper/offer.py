@@ -5,8 +5,8 @@ import time
 import requests
 
 from . import google_services
-from . import tools
 from . import settings
+from . import tools
 
 PATH_TO_OFFERS_INFO_CACHE = 'SystemData/offers_info_cache.json'
 
@@ -119,14 +119,17 @@ class Offer(OfferGoogleDriveHelper):
     @staticmethod
     def _get_cache():
         logging.debug('Getting offers info cache')
-        offers_info_cache = tools.FileHelper.read_json_data(PATH_TO_OFFERS_INFO_CACHE)
+        try:
+            offers_info_cache = tools.read_json_file(PATH_TO_OFFERS_INFO_CACHE)
+        except FileNotFoundError:
+            return {}
 
         return offers_info_cache
 
     @staticmethod
     def _set_cache(new_offers_info_cache):
         logging.debug('Setting new offers info cache')
-        tools.FileHelper.write_json_data(PATH_TO_OFFERS_INFO_CACHE, new_offers_info_cache)
+        tools.write_json_file(PATH_TO_OFFERS_INFO_CACHE, new_offers_info_cache)
 
     def _find_cached_info(self):
         offers_info_cache = self._get_cache()
