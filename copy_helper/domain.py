@@ -16,43 +16,78 @@ import os
 class DomainSettings:
     page: str
     tracking_link_info: dict
+    priority_link_info: dict
 
     @classmethod
     def create_from_dict(cls, domain_info):
         return cls(
             page=domain_info['PageInBroadcast'],
-            tracking_link_info=domain_info['TrackingLinkInfo']
+            tracking_link_info=domain_info['TrackingLinkInfo'],
+            priority_link_info=domain_info['PriorityLinkInfo']
         )
 
 
 class DomainGoogleSheetsHelper(google_services.GoogleSheets):
-    @staticmethod
-    def _get_copies(name, page, date):
-        domain_index = google_services.GoogleSheets.get_table_index_of_value(settings.GeneralSettings.broadcast_id,
-                                                                             name,
-                                                                             f'{page}!1:1')
+    @classmethod
+    def _get_copies(cls, name, page, date):
+
+        broadcast_id = settings.GeneralSettings.broadcast_id
+
+        domain_index = cls.get_table_index_of_value(broadcast_id, name, f'{page}!1:1')
 
         if not domain_index:
             logging.warning(f'Could not find domain {name} in Broadcast')
             return
 
-        date_index = google_services.GoogleSheets.get_table_index_of_value(settings.GeneralSettings.broadcast_id, date,
-                                                                           f'{page}!A:A',
-                                                                           False)
+        date_index = cls.get_table_index_of_value(broadcast_id, date, f'{page}!A:A', False)
         if not domain_index:
             logging.warning(f'Could not find date {date} in Broadcast')
             return
 
         date_row = date_index + 1
         copies_range = f'{page}!{date_row}:{date_row}'
-        copies_for_date = google_services.GoogleSheets.get_data_from_range(settings.GeneralSettings.broadcast_id,
-                                                                           copies_range)
+        copies_for_date = cls.get_data_from_range(broadcast_id, copies_range)
         copies_for_domain = copies_for_date[0][domain_index]
         if not copies_for_domain:
             logging.warning(f'Could not find copies in range {copies_range} in Broadcast')
             return
 
         return copies_for_domain.split(' ')
+
+    @classmethod
+    def _get_priority_footer_values(cls, offer_name, priority_link_info):
+        priority_products_table_id = settings.GeneralSettings.priority_products_table_id
+
+        for page in ['Other PP', 'FIT']:
+            priority_product_index = cls.get_table_index_of_value(priority_products_table_id, offer_name, f'{page}!A:A',
+                                                                  is_row=False)
+
+            if priority_product_index:
+                page = page
+                break
+
+        if not priority_product_index:
+            return None, None
+
+        priority_product_index += 1
+
+        text_value = cls.get_data_from_range(priority_products_table_id, f'{page}!C{priority_product_index}')[0][0]
+
+        if priority_link_info:
+            match priority_link_info['Type']:
+                case 'VolumeGreen':
+                    id = cls.get_data_from_range(priority_products_table_id, f'{page}!E{priority_product_index}')[0][0]
+
+                    url = priority_link_info['Start'] + id + priority_link_info['End']
+
+                case _:
+                    logging.warning('Unsupported priority link type, returning regular url')
+                    url = cls.get_data_from_range(priority_products_table_id, f'{page}!F{priority_product_index}')[0][0]
+
+        else:
+            url = cls.get_data_from_range(priority_products_table_id, f'{page}!F{priority_product_index}')[0][0]
+
+        return text_value, url
 
 
 class Domain(DomainGoogleSheetsHelper):
@@ -260,67 +295,37 @@ class Domain(DomainGoogleSheetsHelper):
             return 'ERROR_CREATING_LINK'
 
     def make_priority_block(self, offer_name):
+        footer_text, url = self._get_priority_footer_values(offer_name, self.settings.priority_link_info)
+        priority_footer_html = "HTML"  # self._make_priority_footer_html(footer_text, url)
+        return priority_footer_html, bool(footer_text)
+        # return cls.make_priority_block(text_value, url)
 
-        priority_product_index = google_services.GoogleSheets.get_table_index_of_value(priority_products_table_id,
-                                                                                       offer_name,
-                                                                                       'Other PP!A:A',
-                                                                                       is_row=False)
-        page = 'Other PP'
-
-        if not priority_product_index:
-            priority_product_index = google_services.GoogleSheets.get_table_index_of_value(priority_products_table_id,
-                                                                                           offer_name, "FIT!A:A",
-                                                                                           is_row=False)
-            page = 'FIT'
-
-        if not priority_product_index:
-            return ''
-
-        text_value = google_services.GoogleSheets.get_data_from_range(priority_products_table_id,
-                                                                      f'{page}!C{priority_product_index + 1}')[0][0]
-        if domain_priority_link_settings:
-            match domain_priority_link_settings['Type']:
-                case 'VolumeGreen':
-                    id = google_services.GoogleSheets.get_data_from_range(priority_products_table_id,
-                                                                          f'{page}!E{priority_product_index + 1}')[0][0]
-
-                    url = domain_priority_link_settings['Start'] + id + domain_priority_link_settings['End']
-
-                case _:
-                    url = None
-
-        else:
-            url = google_services.GoogleSheets.get_data_from_range(priority_products_table_id,
-                                                                   f'{page}!F{priority_product_index + 1}')[0][0]
-
-        return cls.make_priority_block(text_value, url)
-
-    @classmethod
-    def make_priority_block(cls, text_value: str, url):
-        footer_link_keywords = [
-            'edit your e-mail notification preferences or unsubscribe',
-            'Privacy Policy',
-            'unsubscribe here',
-            'unsubscribe',
-            'click here',
-        ]
-
-        for keyword in footer_link_keywords:
-            if keyword in text_value:
-                style_url = tools.FileHelper.read_json_data('Settings/Domains/WorldFinReport.com/styles.json')[
-                    'PriorityFooterUrl']
-
-                # print(url, 'before')
-
-                style_url = style_url.replace('PRIORITY_FOOTER_URL', url)
-                style_url = style_url.replace('PRIORITY_FOOTER_TEXT_URL', keyword)
-                # print(url, 'afret')
-                priority_block = text_value.replace(keyword, style_url)
-                priority_block = priority_block.replace('\n', '<br>')
-                return priority_block
-
-        logging.warning(f'No keyword was found in {text_value}')
-        return ''
+    # @classmethod
+    # def make_priority_block(cls, text_value: str, url):
+    #     footer_link_keywords = [
+    #         'edit your e-mail notification preferences or unsubscribe',
+    #         'Privacy Policy',
+    #         'unsubscribe here',
+    #         'unsubscribe',
+    #         'click here',
+    #     ]
+    #
+    #     for keyword in footer_link_keywords:
+    #         if keyword in text_value:
+    #             style_url = tools.FileHelper.read_json_data('Settings/Domains/WorldFinReport.com/styles.json')[
+    #                 'PriorityFooterUrl']
+    #
+    #             # print(url, 'before')
+    #
+    #             style_url = style_url.replace('PRIORITY_FOOTER_URL', url)
+    #             style_url = style_url.replace('PRIORITY_FOOTER_TEXT_URL', keyword)
+    #             # print(url, 'afret')
+    #             priority_block = text_value.replace(keyword, style_url)
+    #             priority_block = priority_block.replace('\n', '<br>')
+    #             return priority_block
+    #
+    #     logging.warning(f'No keyword was found in {text_value}')
+    #     return ''
 
     def get_copy_files_content(self, copy):
         try:

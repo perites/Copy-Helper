@@ -150,7 +150,7 @@ def main_page():
             for copy in copies:
                 lift_file_content, sl_file_content = domain.get_copy_files_content(copy)
                 tracking_link = domain.make_tracking_link(copy)
-
+                print(tracking_link)
                 priority_footer_block, is_priority = domain.make_priority_block(copy.offer.name)
 
                 print(priority_footer_block, is_priority)
