@@ -43,6 +43,7 @@ class DomainStylesHelper:
             'Privacy Policy',
             'unsubscribe here',
             'unsubscribe',
+            'Click here',
             'click here',
         ]
 
