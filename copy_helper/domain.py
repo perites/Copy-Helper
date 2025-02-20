@@ -6,8 +6,6 @@ from . import settings
 
 from . import tools
 
-from . import offer as offer_cls
-
 import re
 import os
 
@@ -17,19 +15,29 @@ class DomainSettings:
     page: str
     tracking_link_info: dict
     priority_link_info: dict
+    styles_settings: dict
 
     @classmethod
     def create_from_dict(cls, domain_info):
         return cls(
             page=domain_info['PageInBroadcast'],
             tracking_link_info=domain_info['TrackingLinkInfo'],
-            priority_link_info=domain_info['PriorityLinkInfo']
+            priority_link_info=domain_info['PriorityLinkInfo'],
+            styles_settings=domain_info['StylesSettings']
         )
+
+
+class DomainStylesHelper:
+    def __init__(self, styles_settings):
+        self.priority_footer_url_style = styles_settings['PriorityFooterUrlStyle']
+
+    def make_priority_footer_html(self, footer_text, url):
+        return "FOOTER_HTML"
 
 
 class DomainGoogleSheetsHelper(google_services.GoogleSheets):
     @classmethod
-    def _get_copies(cls, name, page, date):
+    def get_copies(cls, name, page, date):
 
         broadcast_id = settings.GeneralSettings.broadcast_id
 
@@ -55,7 +63,7 @@ class DomainGoogleSheetsHelper(google_services.GoogleSheets):
         return copies_for_domain.split(' ')
 
     @classmethod
-    def _get_priority_footer_values(cls, offer_name, priority_link_info):
+    def get_priority_footer_values(cls, offer_name, priority_link_info):
         priority_products_table_id = settings.GeneralSettings.priority_products_table_id
 
         for page in ['Other PP', 'FIT']:
@@ -90,10 +98,12 @@ class DomainGoogleSheetsHelper(google_services.GoogleSheets):
         return text_value, url
 
 
-class Domain(DomainGoogleSheetsHelper):
+class Domain:
     def __init__(self, domain_name):
         self.name = domain_name
         self.settings = DomainSettings.create_from_dict(self.get_file_data('settings'))
+        self.gsh_helper = DomainGoogleSheetsHelper()
+        self.styles_helper = DomainStylesHelper(self.settings.styles_settings)
 
     def get_file_data(self, file_name):
         path_to_domain = f'Settings/Domains/{self.name}'
@@ -108,7 +118,7 @@ class Domain(DomainGoogleSheetsHelper):
                 return tools.read_json_file(f'{path_to_domain}/template.html')
 
     def get_copies(self, date):
-        return self._get_copies(self.name, self.settings.page, date)
+        return self.gsh_helper.get_copies(self.name, self.settings.page, date)
 
     @classmethod
     def apply_styles(cls, name, html_copy, priority_block):
@@ -236,7 +246,7 @@ class Domain(DomainGoogleSheetsHelper):
         return new_a_tag
 
     @classmethod
-    def change_links_color(cls, html_copy, link_color):  # dark html staff here
+    def change_links_color(cls, html_copy, link_color):
         a_tag_pattern = r'<\ba\b[\S\s]*?>'
 
         for old_a_tag in re.findall(a_tag_pattern, html_copy):
@@ -295,9 +305,10 @@ class Domain(DomainGoogleSheetsHelper):
             return 'ERROR_CREATING_LINK'
 
     def make_priority_block(self, offer_name):
-        footer_text, url = self._get_priority_footer_values(offer_name, self.settings.priority_link_info)
-        priority_footer_html = "HTML"  # self._make_priority_footer_html(footer_text, url)
+        footer_text, url = self.gsh_helper.get_priority_footer_values(offer_name, self.settings.priority_link_info)
+        priority_footer_html = self.styles_helper.make_priority_footer_html(footer_text, url)
         return priority_footer_html, bool(footer_text)
+
         # return cls.make_priority_block(text_value, url)
 
     # @classmethod
