@@ -261,8 +261,6 @@ class Domain(DomainGoogleSheetsHelper):
 
     def make_priority_block(self, offer_name):
 
-        priority_products_table_id = ''
-
         priority_product_index = google_services.GoogleSheets.get_table_index_of_value(priority_products_table_id,
                                                                                        offer_name,
                                                                                        'Other PP!A:A',
@@ -346,16 +344,26 @@ class Domain(DomainGoogleSheetsHelper):
             logging.exception(f'Error while receiving lift files for copy {str(copy)}')
             return None, None
 
-    def get_copy_file_content(self, copy_file):
+    @staticmethod
+    def get_copy_file_content(copy_file):
         copy_file_content = google_services.GoogleDrive.get_file_content(copy_file)
         if not copy_file_content:
             logging.warning(f'Could not receive content of file {copy_file}')
             return ''
 
+        return copy_file_content
+
     def save_copy_files(self, lift_file_content, sl_file_content, path_to_domain_results, str_copy, is_priority):
         os.makedirs(path_to_domain_results, exist_ok=True)
-        self.save_lift_file(lift_file_content, path_to_domain_results, str_copy, is_priority)
-        self.save_sl_file(sl_file_content, path_to_domain_results, str_copy, is_priority)
+        if lift_file_content:
+            self.save_lift_file(lift_file_content, path_to_domain_results, str_copy, is_priority)
+        else:
+            logging.warning('Got no lift file content, not saving')
+
+        if sl_file_content:
+            self.save_sl_file(sl_file_content, path_to_domain_results, str_copy, is_priority)
+        else:
+            logging.warning('Got no sl file content, not saving')
 
     #     try:
     #
@@ -377,7 +385,8 @@ class Domain(DomainGoogleSheetsHelper):
     @staticmethod
     def save_lift_file(lift_file_content, path_to_domain_results, str_copy, is_priority):
         try:
-            path = path_to_domain_results + f'{str_copy}.html'
+            file_name = str_copy + ('-Priority' if is_priority else '')
+            path = path_to_domain_results + f'{file_name}.html'
             with open(path, 'w', encoding='utf-8') as file:
                 file.write(lift_file_content)
                 logging.info(f'Successfully saved Copy file for {str_copy}')

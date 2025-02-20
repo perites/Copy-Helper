@@ -19,8 +19,13 @@ class Copy:
         if not match:
             logging.debug(f'Failed to find offer name, lift_number and img_code in {str_copy}')
             return None
+        try:
+            offer_obj = offer.Offer(match.group(1))
+        except Exception:
+            logging.exception(f'Error while creating offer {match.group(1)}')
+            return None
 
-        return cls(offer.Offer(match.group(1)), match.group(2), match.group(3))
+        return cls(offer_obj, match.group(2), match.group(3))
 
     def __str__(self):
         return self.offer.name + self.lift_number + self.img_code
