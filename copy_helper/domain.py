@@ -16,6 +16,7 @@ class DomainSettings:
     tracking_link_info: dict
     priority_link_info: dict
     styles_settings: dict
+    antispam: bool
 
     @classmethod
     def create_from_dict(cls, domain_info):
@@ -23,7 +24,8 @@ class DomainSettings:
             page=domain_info['PageInBroadcast'],
             tracking_link_info=domain_info['TrackingLinkInfo'],
             priority_link_info=domain_info['CustomPriorityUnsubLinkInfo'],
-            styles_settings=domain_info['StylesSettings']
+            styles_settings=domain_info['StylesSettings'],
+            antispam=domain_info['AntiSpam']
         )
 
 
@@ -75,6 +77,38 @@ class DomainStylesHelper:
         html_copy = html_copy.replace('padding:10px 0', f'padding:{self.upper_down_padding} 0')
 
         return html_copy
+
+    @staticmethod
+    def antispam_text(text):
+
+        replacements = settings.GeneralSettings.anti_spam_replacements
+
+        new_text = ''
+        inside_tag = False
+        inside_entity = False
+        for char in text:
+
+            match char:
+                case '<':
+                    inside_tag = True
+
+                case '>':
+                    inside_tag = False
+
+                case '&':
+                    inside_entity = True
+
+                case ';':
+                    inside_entity = False
+
+            if (not inside_tag) and (not inside_entity) and replacements.get(char):
+                replaced_char = replacements.get(char)
+            else:
+                replaced_char = char
+
+            new_text += replaced_char
+
+        return new_text
 
     @staticmethod
     def replace_style(style_name, new_value, lift_html):
@@ -178,6 +212,9 @@ class DomainGoogleSheetsHelper(google_services.GoogleSheets):
 
                     url = priority_link_info['Start'] + id + priority_link_info['End']
 
+                case '':
+                    url = cls.get_data_from_range(priority_products_table_id, f'{page}!F{priority_product_index}')[0][0]
+
                 case _:
                     logging.warning('Unsupported priority link type, returning regular url')
                     url = cls.get_data_from_range(priority_products_table_id, f'{page}!F{priority_product_index}')[0][0]
@@ -219,78 +256,12 @@ class Domain:
 
         return self.styles_helper.apply_styles(lift_file_html)
 
-    # domain_general_settings = tools.FileHelper.read_json_data(f'Settings/Domains/{name}/settings.json')
-    # if domain_general_settings['AntiSpam'] == 'yes':
-    #     html_copy = cls.anti_spam_text(html_copy)
-    #
-    # html_copy = cls.add_template(name, html_copy, priority_block)
+    def anti_spam_text(self, text):
+        return self.styles_helper.antispam_text(text)
 
     @staticmethod
-    def anti_spam_text(text):
-        default_replacements = {
-            'A': 'А',
-            'E': 'Е',
-            'I': 'І',
-            'O': 'О',
-            'P': 'Р',
-            'T': 'Т',
-            'H': 'Н',
-            'K': 'К',
-            'X': 'Х',
-            'C': 'С',
-            'B': 'В',
-            'M': 'М',
-            'e': 'е',
-            'y': 'у',
-            'i': 'і',
-            'o': 'о',
-            'a': 'а',
-            'x': 'х',
-            'c': 'с',
-            '%': '％',
-            '$': '＄',
-        }
-        user_replacements = tools.FileHelper.read_json_data('Settings/General-Settings.json').get(
-            'AntiSpamReplacements')
-        replacements = {**default_replacements, **user_replacements}
-
-        new_text = ''
-        inside_tag = False
-        inside_entity = False
-        for char in text:
-
-            match char:
-                case '<':
-                    inside_tag = True
-
-                case '>':
-                    inside_tag = False
-
-                case '&':
-                    inside_entity = True
-
-                case ';':
-                    inside_entity = False
-
-            if (not inside_tag) and (not inside_entity) and replacements.get(char):
-                replaced_char = replacements.get(char)
-            else:
-                replaced_char = char
-
-            new_text += replaced_char
-
-        return new_text
-        # if char == "&":
-        #     entity = '&'
-        # elif char == ";" and entity:
-        #     entity += ';'
-        #     replaced_char = replacements.get(entity) if replacements.get(entity) else char
-        #     entity = ''
-        # elif entity:
-        #     entity += char
-        #
-        #
-        # replaced_char = char
+    def lift_add_link(tracking_link, lift_copy_html):
+        return lift_copy_html.replace('urlhere', tracking_link)
 
     @classmethod
     def add_template(cls, name, html_copy, priority_block):
@@ -340,7 +311,7 @@ class Domain:
             return priority_footer_html
         else:
             logging.info(f'No priority footer text was found for {offer_name}')
-            return None
+            return ''
 
     def get_copy_files_content(self, copy):
         try:
@@ -373,17 +344,11 @@ class Domain:
 
         return copy_file_content
 
-    def save_copy_files(self, lift_file_content, sl_file_content, path_to_domain_results, str_copy, is_priority):
+    def save_copy_files(self, lift_file_content, sl_file_content, path_to_domain_results, str_copy, is_priority,
+                        tracking_link):
         os.makedirs(path_to_domain_results, exist_ok=True)
-        if lift_file_content:
-            self.save_lift_file(lift_file_content, path_to_domain_results, str_copy, is_priority)
-        else:
-            logging.warning('Got no lift file content, not saving')
-
-        if sl_file_content:
-            self.save_sl_file(sl_file_content, path_to_domain_results, str_copy, is_priority)
-        else:
-            logging.warning('Got no sl file content, not saving')
+        self.save_lift_file(lift_file_content, path_to_domain_results, str_copy, is_priority)
+        self.save_sl_file(sl_file_content, path_to_domain_results, str_copy, is_priority, tracking_link)
 
     @staticmethod
     def save_lift_file(lift_file_content, path_to_domain_results, str_copy, is_priority):
@@ -398,7 +363,7 @@ class Domain:
             logging.exception(f'Error while saving lift file for {str_copy}')
 
     @staticmethod
-    def save_sl_file(sl_file_content, path_to_domain_results, str_copy, is_priority):
+    def save_sl_file(sl_file_content, path_to_domain_results, str_copy, is_priority, tracking_link):
         try:
             path_to_sls_file = path_to_domain_results + 'SLs.txt'
             try:
@@ -412,8 +377,16 @@ class Domain:
             except FileNotFoundError:
                 pass
 
-            copy_sls = (f'{str_copy}\n----------------------------------------\n\n' + sl_file_content +
-                        "\n\n----------------------------------------\n\n\n")
+            copy_sls = (
+                    str_copy + ('-Priority' if is_priority else '') + '\n\n' +
+
+                    f'Tracking link:\n{tracking_link}\n\n' +
+
+                    'Sls:\n' +
+
+                    sl_file_content +
+
+                    "\n----------------------------------------\n\n\n\n")
 
             with open(path_to_sls_file, 'a', encoding='utf-8') as file:
                 file.write(copy_sls)

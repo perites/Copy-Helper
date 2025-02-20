@@ -117,12 +117,12 @@ def cinput(hint=''):
 def main_page():
     cprint('Type what you want to do:')
     cprint('make-domain, apply-styles, exit')
-    action = cinput()
+    action = cinput().strip()
     match action:
         case 'exit':
             exit()
 
-        case 'make-domain':
+        case 'make-domain' | 'md':
             cprint('To make domain, enter <domain-name>(full name or abbreviate) <date>(same as column in broadcast)')
             domain_name, date = cinput().split(' ')
 
@@ -149,15 +149,21 @@ def main_page():
             path_to_domain_results = copy_helper.settings.GeneralSettings.result_directory + f'/{date.replace('/', '.')}/{domain.name}/'
             for copy in copies:
                 lift_file_content, sl_file_content = domain.get_copy_files_content(copy)
-
-                tracking_link = domain.make_tracking_link(copy)
                 lift_file_content = domain.apply_styles(lift_file_content)
-                # lift_file_content = domain.add_link(tracking_link)
-
                 priority_footer_block = domain.make_priority_block(copy.offer.name)
 
+                if domain.settings.antispam:
+                    lift_file_content = domain.anti_spam_text(lift_file_content)
+                    priority_footer_block = domain.anti_spam_text(priority_footer_block)
+                    sl_file_content = domain.anti_spam_text(sl_file_content)
+
+                # lift_file_content = domain.add_template(lift_file_content, priority_footer_block)
+
+                tracking_link = domain.make_tracking_link(copy)
+                lift_file_content = domain.lift_add_link(tracking_link, lift_file_content)
+
                 domain.save_copy_files(lift_file_content, sl_file_content, path_to_domain_results, str(copy),
-                                       bool(priority_footer_block))
+                                       bool(priority_footer_block), tracking_link)
 
         case 'apply-styles':
             pass
@@ -170,13 +176,7 @@ if __name__ == "__main__":
         try:
             main_page()
         except Exception as e:
+            logging.critical('Got Unexpected Error!')
             logging.exception(e)
             print('Returning to main page')
             main_page()
-
-    #
-    # current_commit, remote_commit = get_commits()
-    # if current_commit != remote_commit:
-    #     print("New update available")
-    #     print("To update you can run: git pull origin")
-    # parse_args()

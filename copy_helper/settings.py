@@ -16,6 +16,7 @@ class GeneralSettings:
     machine_id: str
     priority_products_table_id: str
     default_style_settings: dict
+    anti_spam_replacements: dict
 
     @classmethod
     def set_settings(cls):
@@ -30,6 +31,7 @@ class GeneralSettings:
         cls.domains_short_names = settings_dict["DomainsShortNames"]
         cls.priority_products_table_id = settings_dict['PriorityProductsTableId']
         cls.default_style_settings = settings_dict['DefaultStyles']
+        cls.anti_spam_replacements = settings_dict['AntiSpamReplacements']
         cls.machine_id = cls.get_unique_machine_id()
 
     @staticmethod
