@@ -219,17 +219,17 @@ class DomainGoogleSheetsHelper(google_services.GoogleSheets):
                         url = cls.get_data_from_range(priority_products_table_id, f'{page}!F{priority_product_index}')
                         if not url:
                             logging.warning('Url not found')
-                            url =  ''
+                            url = ''
                         else:
                             url = url[0][0]
                     else:
                         url = priority_link_info['Start'] + id[0][0] + priority_link_info['End']
 
-                case None:
+                case '':
                     url = cls.get_data_from_range(priority_products_table_id, f'{page}!F{priority_product_index}')
                     if not url:
                         logging.warning('Url not found')
-                        url =  ''
+                        url = ''
                     else:
                         url = url[0][0]
 
@@ -238,7 +238,7 @@ class DomainGoogleSheetsHelper(google_services.GoogleSheets):
                     url = cls.get_data_from_range(priority_products_table_id, f'{page}!F{priority_product_index}')
                     if not url:
                         logging.warning('Url not found')
-                        url =  ''
+                        url = ''
                     else:
                         url = url[0][0]
 
@@ -246,7 +246,7 @@ class DomainGoogleSheetsHelper(google_services.GoogleSheets):
             url = cls.get_data_from_range(priority_products_table_id, f'{page}!F{priority_product_index}')
             if not url:
                 logging.warning('Url not found')
-                url =  ''
+                url = ''
             else:
                 url = url[0][0]
 
@@ -331,8 +331,8 @@ class Domain:
             logging.exception(f'Error while creating tracking link for {self.name} copy {copy.name}')
             return 'ERROR_CREATING_LINK'
 
-    def make_priority_block(self, offer_name):
-        footer_text, url = self.gsh_helper.get_priority_footer_values(offer_name, self.settings.priority_link_info)
+    def make_priority_block(self, footer_text, url, offer_name):
+
         if footer_text:
             logging.info(f'Priority footer was found for {offer_name}')
             priority_footer_html = self.styles_helper.make_priority_footer_html(footer_text, url)
@@ -372,14 +372,14 @@ class Domain:
 
         return copy_file_content
 
-    def save_copy_files(self, lift_file_content, sl_file_content, path_to_domain_results, str_copy, is_priority,
+    def save_copy_files(self, lift_file_content, sl_file_content, path_to_domain_results, str_copy,
+                        priority_info,
                         tracking_link):
         os.makedirs(path_to_domain_results, exist_ok=True)
-        self.save_lift_file(lift_file_content, path_to_domain_results, str_copy, is_priority)
-        self.save_sl_file(sl_file_content, path_to_domain_results, str_copy, is_priority, tracking_link)
+        self.save_lift_file(lift_file_content, path_to_domain_results, str_copy, bool(priority_info['text']))
+        self.save_sl_file(sl_file_content, path_to_domain_results, str_copy, priority_info, tracking_link)
 
-    @staticmethod
-    def save_lift_file(lift_file_content, path_to_domain_results, str_copy, is_priority):
+    def save_lift_file(self, lift_file_content, path_to_domain_results, str_copy, is_priority):
         try:
             file_name = str_copy + ('-Priority' if is_priority else '')
             path = path_to_domain_results + f'{file_name}.html'
@@ -390,10 +390,9 @@ class Domain:
         except Exception:
             logging.exception(f'Error while saving lift file for {str_copy}')
 
-    @staticmethod
-    def save_sl_file(sl_file_content, path_to_domain_results, str_copy, is_priority, tracking_link):
+    def save_sl_file(self, sl_file_content, path_to_domain_results, str_copy, priority_info, tracking_link):
         try:
-            path_to_sls_file = path_to_domain_results + 'SLs.txt'
+            path_to_sls_file = path_to_domain_results + f'SLs-{self.name}.txt'
             try:
                 with open(path_to_sls_file, 'r', encoding='utf-8') as file:
                     sls_file_content = file.read()
@@ -405,10 +404,15 @@ class Domain:
             except FileNotFoundError:
                 pass
 
-            copy_sls = (
-                    str_copy + ('-Priority' if is_priority else '') + '\n\n' +
+            url_info = ''
+            if priority_info['text']:
+                url_info = f'Unsub link:\n{priority_info['url']}\n\n'
 
-                    f'Tracking link:\n{tracking_link}\n\n' +
+            copy_sls = (
+
+                    str_copy + ('-Priority' if bool(priority_info['text']) else '') + '\n\n' +
+
+                    f'Tracking link:\n{tracking_link}\n\n' + url_info +
 
                     'Sls:\n' +
 

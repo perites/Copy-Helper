@@ -30,11 +30,18 @@ def cinput(hint=''):
 
 def process_copy_files_content(domain, copy, path_to_domain_results, lift_file_content, sl_file_content):
     tracking_link = domain.make_tracking_link(copy)
-    priority_footer_block = domain.make_priority_block(copy.offer.name)
+
+    footer_text, url = domain.gsh_helper.get_priority_footer_values(copy.offer.name, domain.settings.priority_link_info)
+    priority_info = {
+        'text': footer_text,
+        'url': url,
+    }
+
+    priority_footer_block = domain.make_priority_block(footer_text, url, copy.offer.name)
 
     if not lift_file_content:
         domain.save_copy_files(lift_file_content, sl_file_content, path_to_domain_results, str(copy),
-                               bool(priority_footer_block), tracking_link)
+                               priority_info, tracking_link)
         return
 
     lift_file_content = domain.apply_styles(lift_file_content)
@@ -49,7 +56,7 @@ def process_copy_files_content(domain, copy, path_to_domain_results, lift_file_c
     lift_file_content = domain.add_link_to_lift(tracking_link, lift_file_content)
 
     domain.save_copy_files(lift_file_content, sl_file_content, path_to_domain_results, str(copy),
-                           bool(priority_footer_block), tracking_link)
+                           priority_info, tracking_link)
 
 
 def main_page():
@@ -88,7 +95,7 @@ def main_page():
 
             cprint(f'Successfully processed {len(copies)} copies.')
 
-            path_to_domain_results = copy_helper.settings.GeneralSettings.result_directory + f'/{date.replace('/', '.')}/{domain.name}/'
+            path_to_domain_results = copy_helper.settings.GeneralSettings.result_directory + f'/{domain.name}/{date.replace('/', '.')}/'
             for copy in copies:
                 lift_file_content, sl_file_content = domain.get_copy_files_content(copy)
                 process_copy_files_content(domain, copy, path_to_domain_results, lift_file_content, sl_file_content)
@@ -107,7 +114,7 @@ def main_page():
                     f'Cant find that domain, ensure that you entering name correctly and {domain_name} in Settings/Domains')
                 raise Exception
 
-            path_to_domain_results = copy_helper.settings.GeneralSettings.result_directory + f'/{date.replace('/', '.')}/{domain.name}/'
+            path_to_domain_results = copy_helper.settings.GeneralSettings.result_directory + f'/{domain.name}/{date.replace('/', '.')}/'
             logging.info(f'Trying to read {path_to_domain_results + str_copy}.html')
             with open(path_to_domain_results + f'{str_copy}.html', 'r', encoding='utf-8') as file:
                 lift_file_content = file.read()
