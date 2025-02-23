@@ -1,5 +1,5 @@
 # TODO change logging  debug to info in some places
-
+# TODO move get_priority_footer_values to offer
 import logging
 import sys
 
@@ -34,13 +34,20 @@ def cinput(hint=''):
 def process_copy_files_content(domain, copy, path_to_domain_results, lift_file_content, sl_file_content, date):
     tracking_link = domain.make_tracking_link(copy)
 
-    footer_text, url = domain.gsh_helper.get_priority_footer_values(copy.offer.name, domain.settings.priority_link_info)
-    priority_info = {
-        'text': footer_text,
-        'url': url,
-    }
+    if copy.offer.info.is_priority:
+        footer_text, url = domain.gsh_helper.get_priority_footer_values(copy.offer, domain.settings.priority_link_info)
+        priority_info = {
+            'text': footer_text,
+            'url': url,
+        }
 
-    priority_footer_block = domain.make_priority_block(footer_text, url, copy.offer.name)
+        priority_footer_block = domain.make_priority_block(footer_text, url, copy.offer.name)
+    else:
+        priority_info = {
+            'text': None,
+            'url': None,
+        }
+        priority_footer_block = ''
 
     if not lift_file_content:
         domain.save_copy_files(lift_file_content, sl_file_content, path_to_domain_results, str(copy),
@@ -67,11 +74,14 @@ def process_copy_files_content(domain, copy, path_to_domain_results, lift_file_c
 
 def main_page():
     cprint('Type what you want to do:')
-    cprint('make-domain | apply-styles | add-domain | exit')
+    cprint('make-domain | apply-styles | add-domain | clear-cache | exit')
     action = cinput().strip()
     match action:
         case 'exit':
             exit()
+
+        case 'clear-cache':
+            pass
 
         case 'add-domain':
             cprint('To create new domain enter name it below. Name should be same as in broadcast')
