@@ -53,6 +53,7 @@ class GeneralSettings:
             "PriorityProductsTableId": "1e40khWM1dKTje_vZi4K4fL-RA8-D6jhp2wmZSXurQH0",
             "DirectoryToStoreResults": "",
             "InformationLevel": "All",
+            "AutoImagesSavePath": "",
             "DomainsShortNames": {
                 "DOMAIN_ABR": "DomainNameAsInBroadcast"
             },
