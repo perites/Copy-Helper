@@ -51,8 +51,11 @@ class ServicesHelper:
                 with open(path_to_credentials, 'w', encoding='utf-8') as file:
                     file.write(creds.to_json())
                 return creds
-
-        flow = InstalledAppFlow.from_client_secrets_file('SystemData/OAuth 2.0 Client ID.json', scopes)
+        path_to_user_oauth_data = 'SystemData/OAuth 2.0 Client ID.json'
+        if not os.path.exists(path_to_credentials):
+            logging.warning('Put OAuth 2.0 Client ID.json inside SystemData folder')
+            exit()
+        flow = InstalledAppFlow.from_client_secrets_file(path_to_user_oauth_data, scopes)
         creds = flow.run_local_server(port=0)
 
         with open(path_to_credentials, 'w', encoding='utf-8') as file:
