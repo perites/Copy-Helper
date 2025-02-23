@@ -149,8 +149,6 @@ class GoogleSheets:
         result = sheet.values().get(spreadsheetId=spreadsheet_id, range=range).execute()
         values = result.get('values', [])
 
-        # print(values[0])
-
         return values
 
     @classmethod

@@ -4,6 +4,7 @@ import logging
 import sys
 
 import copy_helper
+import os
 
 datefmt = '%d-%m %H:%M:%S:%M'
 logging.basicConfig(
@@ -74,7 +75,7 @@ def process_copy_files_content(domain, copy, path_to_domain_results, lift_file_c
 
 def main_page():
     cprint('Type what you want to do:')
-    cprint('make-domain | apply-styles | add-domain | clear-cache | exit')
+    cprint('make-domain (md) | apply-styles | add-domain | clear-cache | exit')
     action = cinput().strip()
     match action:
         case 'exit':
@@ -89,7 +90,27 @@ def main_page():
             copy_helper.settings.GeneralSettings.create_new_domain(domain_name)
 
         case 'make-domain' | 'md':
+            path_to_domains = 'Settings/Domains/'
+            if not os.path.exists(path_to_domains):
+                os.makedirs(path_to_domains)
+
             cprint('To make domain, enter <domain-name>(full name or abbreviate) <date>(same as column in broadcast)')
+            added_domains = []
+            domain_folders_names = [entry.name for entry in os.scandir(path_to_domains) if entry.is_dir()]
+
+            for domain_folder_name in domain_folders_names:
+                abr_found = False
+                for domain_abr, domain_full_name in copy_helper.settings.GeneralSettings.domains_short_names.items():
+                    if domain_folder_name == domain_full_name:
+                        added_domains.append(domain_abr + f' ({domain_folder_name})')
+                        abr_found = True
+                        break
+
+                if not abr_found:
+                    added_domains.append(domain_folder_name)
+
+            cprint(f'Added domains : {', '.join(added_domains)}')
+
             domain_name, date = cinput().split(' ')
             domain_name = copy_helper.settings.GeneralSettings.domains_short_names.get(domain_name)
             if not domain_name:
