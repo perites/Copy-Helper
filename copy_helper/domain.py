@@ -262,7 +262,6 @@ class Domain:
 
         default_style_settings = settings.GeneralSettings.default_style_settings
         user_domain_styles_settings = self.settings.styles_settings
-
         self.styles_helper = DomainStylesHelper({**default_style_settings, **user_domain_styles_settings})
 
     def get_file_data(self, file_name):
@@ -321,6 +320,11 @@ class Domain:
                     tracking_link = tracking_link_info['Start'] + copy.offer.info.tracking_id('volume_green') + \
                                     tracking_link_info[
                                         'End'] + f'{copy.offer.info.tracking_id('img_it')}_{copy.lift_number}{copy.img_code}'
+
+                case 'CT TM':
+                    tracking_link = tracking_link_info['Start'] + copy.offer.info.tracking_id('ct_tm') + \
+                                    tracking_link_info[
+                                        'End'] + f'{copy.offer.info.tracking_id('ct_tm')}_{copy.lift_number}{copy.img_code}'
                 case _:
                     logging.warning(f"Got unsupported link type {tracking_link_info['Type']}")
                     tracking_link = tracking_link_info['Start'] + "UNSUPPORTED_TYPE" + tracking_link_info[
