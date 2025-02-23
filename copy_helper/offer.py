@@ -21,6 +21,7 @@ class OfferInfo:
     status: str
     google_drive_folder_id: str
     _raw_column_values: dict
+    is_priority: bool
 
     def tracking_id(self, tracking_id_name):
         tracking_id_to_monday_id = {
@@ -117,10 +118,6 @@ class Offer(OfferGoogleDriveHelper):
         logging.info(f'Searching info for offer {self.name}')
 
         offer_info = self._find_cached_info()
-        if not offer_info:
-            raw_offer_info = self._get_raw_offer_info()
-            offer_info = self._process_raw_offer_info(raw_offer_info)
-            self._set_offer_cache(offer_info)
 
         if offer_info['status'] not in ALLOWED_STATUSES:
             raise OfferNotAllowedToSend(self.name)
@@ -128,7 +125,8 @@ class Offer(OfferGoogleDriveHelper):
         return OfferInfo(name=offer_info['name'],
                          status=offer_info['status'],
                          google_drive_folder_id=offer_info['google_drive_folder_id'],
-                         _raw_column_values=offer_info['raw_column_values']
+                         _raw_column_values=offer_info['raw_column_values'],
+                         is_priority=offer_info.get('is_priority', True)
                          )
 
     def get_copy_files(self, lift_number):
@@ -154,21 +152,38 @@ class Offer(OfferGoogleDriveHelper):
         offer_cached_info = offers_info_cache.get(self.name)
         if not offer_cached_info:
             logging.debug(f'Offer {self.name} was not found in cache')
-            return
+            offer_cached_info = self._set_offer_cache()
         elif offer_cached_info['creation_timestamp'] + MAX_CACHE_DURATION_SECONDS < time.time():
             logging.debug(f'Cache for offer {self.name} expired')
-            return
+            offer_cached_info = self._set_offer_cache()
 
         logging.debug(f'Found valid cache for {self.name}')
         return offer_cached_info
 
-    def _set_offer_cache(self, offer_info, offers_info_cache=None):
+    def _set_offer_cache(self):
         logging.debug(f'Caching info for offer {self.name}')
 
-        offers_info_cache = offers_info_cache if offers_info_cache else self._get_cache()
+        raw_offer_info = self._get_raw_offer_info()
+        offer_info = self._process_raw_offer_info(raw_offer_info)
+
+        offers_info_cache = self._get_cache()
         offers_info_cache[self.name] = offer_info
 
         self._set_cache(offers_info_cache)
+
+        return offer_info
+
+    def update_offer_cache(self, key, new_value):
+        offer_info = self._find_cached_info()
+        offer_info[key] = new_value
+
+        offers_info_cache = self._get_cache()
+        offers_info_cache[self.name] = offer_info
+
+        self._set_cache(offers_info_cache)
+
+    def update_priority(self, new_value):
+        self.update_offer_cache('is_priority', new_value)
 
     def _get_raw_offer_info(self):
         logging.debug(f'Getting info for name {self.name} from backend')

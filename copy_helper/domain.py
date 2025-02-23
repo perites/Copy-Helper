@@ -192,11 +192,12 @@ class DomainGoogleSheetsHelper(google_services.GoogleSheets):
         return copies_for_domain.strip().split(' ')
 
     @classmethod
-    def get_priority_footer_values(cls, offer_name, priority_link_info):
+    def get_priority_footer_values(cls, offer, priority_link_info):
+        logging.debug(f'Searching for footer for offer {offer.name}')
         priority_products_table_id = settings.GeneralSettings.priority_products_table_id
 
         for page in ['Other PP', 'FIT']:
-            priority_product_index = cls.get_table_index_of_value(priority_products_table_id, offer_name, f'{page}!A:A',
+            priority_product_index = cls.get_table_index_of_value(priority_products_table_id, offer.name, f'{page}!A:A',
                                                                   is_row=False)
 
             if priority_product_index:
@@ -204,6 +205,7 @@ class DomainGoogleSheetsHelper(google_services.GoogleSheets):
                 break
 
         if not priority_product_index:
+            offer.update_priority(False)
             return None, None
 
         priority_product_index += 1
