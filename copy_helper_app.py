@@ -55,7 +55,7 @@ def process_copy_files_content(domain, copy, path_to_domain_results, lift_file_c
         return
 
     lift_file_content = copy_helper.ImageHelper.process_images(copy, domain.styles_helper.image_block,
-                                                               lift_file_content)
+                                                               lift_file_content, date)
 
     lift_file_content = domain.apply_styles(lift_file_content)
 

@@ -113,6 +113,7 @@ class Offer(OfferGoogleDriveHelper):
     def __init__(self, name):
         self.name = name
         self.info = self.get_offer_info()
+        self.set_drive_service()
 
     def get_offer_info(self):
         logging.info(f'Searching info for offer {self.name}')
@@ -126,7 +127,7 @@ class Offer(OfferGoogleDriveHelper):
                          status=offer_info['status'],
                          google_drive_folder_id=offer_info['google_drive_folder_id'],
                          _raw_column_values=offer_info['raw_column_values'],
-                         is_priority=offer_info.get('is_priority', True)
+                         is_priority=offer_info['is_priority']
                          )
 
     def get_copy_files(self, lift_number):
@@ -214,6 +215,7 @@ class Offer(OfferGoogleDriveHelper):
                 processed_offer_info['google_drive_folder_id'] = google_drive_folder_id
 
         processed_offer_info['creation_timestamp'] = time.time()
+        processed_offer_info['is_priority'] = True  # at first treat all offers as priority
 
         return processed_offer_info
 

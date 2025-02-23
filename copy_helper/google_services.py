@@ -33,7 +33,12 @@ class ServicesHelper:
     @staticmethod
     def get_credentials(scopes):
         creds = None
-        path_to_credentials = 'SystemData/services_token.json'
+
+        path_system_data_folder = 'SystemData/'
+        if not os.path.exists(path_system_data_folder):
+            os.makedirs(path_system_data_folder)
+
+        path_to_credentials = path_system_data_folder + 'services_token.json'
 
         if os.path.exists(path_to_credentials):
             creds = Credentials.from_authorized_user_file(path_to_credentials, scopes)
@@ -58,7 +63,11 @@ class ServicesHelper:
 
 
 class GoogleDrive:
-    drive_service = ServicesHelper.get_service('drive')
+    drive_service = None
+
+    @classmethod
+    def set_drive_service(cls):
+        cls.drive_service = ServicesHelper.get_service('drive')
 
     @classmethod
     def execute_query(cls, query, fields='files(id, name)'):
@@ -126,8 +135,12 @@ class GoogleDrive:
 
 
 class GoogleSheets:
-    sheet_service = ServicesHelper.get_service('sheets')
+    sheet_service = None
     cache = {}
+
+    @classmethod
+    def set_sheet_service(cls):
+        cls.sheet_service = ServicesHelper.get_service('sheets')
 
     @classmethod
     def get_new_data_from_range(cls, spreadsheet_id, range):

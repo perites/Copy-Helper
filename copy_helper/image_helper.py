@@ -9,9 +9,13 @@ from PIL import Image
 
 class ImageHelper:
     @classmethod
-    def save_image(cls, image_file_name, image_url):
+    def save_image(cls, image_file_name, image_url, date):
         try:
-            save_image_path = settings.GeneralSettings.save_image_path
+            save_image_path = f'{settings.GeneralSettings.save_image_path}/{date}'
+
+            if not os.path.exists(save_image_path):
+                os.makedirs(save_image_path)
+
             temp_full_image_path = f'{save_image_path}/{image_file_name}'
 
             with os.scandir(save_image_path) as entries:
@@ -55,7 +59,7 @@ class ImageHelper:
         return lift_file_content
 
     @classmethod
-    def process_images(cls, copy, image_block, lift_file_content):
+    def process_images(cls, copy, image_block, lift_file_content, date):
         src_part_pattern = r'src="[^"]*'
 
         src_list = re.findall(src_part_pattern, lift_file_content)
@@ -69,6 +73,6 @@ class ImageHelper:
             for index, src_part in enumerate(src_list):
                 img_url = src_part.split('"')[1]
 
-                cls.save_image(f'{str(copy)}-image-{index + 1}', img_url)
+                cls.save_image(f'{str(copy)}-image-{index + 1}', img_url, date)
 
         return lift_file_content
