@@ -258,8 +258,8 @@ class Domain:
     def get_copies(self, date):
         return self.gsh_helper.get_copies(self.name, self.settings.page, date)
 
-    def apply_styles(self, lift_file_html):
-        logging.info('Applying styles to copy')
+    def apply_styles(self, lift_file_html, str_copy):
+        logging.debug(f'Applying styles to copy {str_copy}')
         if not lift_file_html:
             logging.warning('Got nothing as lift file html')
             return ''
@@ -288,7 +288,7 @@ class Domain:
 
     def make_tracking_link(self, copy):
         try:
-            logging.info(f'Creating link for domain {self.name} copy {str(copy)}')
+            logging.debug(f'Creating link for domain {self.name} copy {str(copy)}')
             tracking_link_info = self.settings.tracking_link_info
 
             match tracking_link_info['Type']:
