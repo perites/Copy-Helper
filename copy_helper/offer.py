@@ -20,10 +20,21 @@ class OfferInfo:
     name: str
     status: str
     google_drive_folder_id: str
-    _tracking_ids: dict
+    _raw_column_values: dict
 
     def tracking_id(self, tracking_id_name):
-        return self._tracking_ids.get(tracking_id_name) or f"{tracking_id_name}_NOT_FOUND"
+        tracking_id_to_monday_id = {
+            'volume_green': '_____8',
+            'img_it': 'text0',
+            'rt_tm': 'text21__1'
+        }
+        monday_id = tracking_id_to_monday_id.get(tracking_id_name)
+        if monday_id:
+            for column in self._raw_column_values:
+                if column['id'] == monday_id:
+                    return column['text']
+
+        return f'{tracking_id_name}_NOT_FOUND'
 
 
 class OfferGoogleDriveHelper(google_services.GoogleDrive):
@@ -110,7 +121,7 @@ class Offer(OfferGoogleDriveHelper):
         return OfferInfo(name=offer_info['name'],
                          status=offer_info['status'],
                          google_drive_folder_id=offer_info['google_drive_folder_id'],
-                         _tracking_ids=offer_info['tracking_ids']
+                         _raw_column_values=offer_info['raw_column_values']
                          )
 
     def get_copy_files(self, lift_number):
@@ -170,26 +181,14 @@ class Offer(OfferGoogleDriveHelper):
     def _process_raw_offer_info(self, raw_offer_info):
         logging.debug('Processing raw offer info')
 
-        monday_id_to_names = {'status7': 'status',
-                              '_____8': 'volume_green',
-                              'text0': 'img_it',
-                              'text21__1': 'rt_tm'}
-
-        tracking_ids = ['volume_green', 'img_it', 'rt_tm']
-
-        processed_offer_info = {'name': self.name, 'tracking_ids': {}}
-
+        processed_offer_info = {'name': self.name, 'raw_column_values': raw_offer_info['column_values']}
         for column in raw_offer_info['column_values']:
-            if column['id'] in monday_id_to_names.keys():
-                field_name = monday_id_to_names[column["id"]]
-                if field_name in tracking_ids:
-                    processed_offer_info["tracking_ids"][field_name] = column['text']
-                else:
-                    processed_offer_info[field_name] = column['text']
-            elif column['id'] == '_____':
-                google_drive_folder_url = column['text']
-                google_drive_folder_id = self._get_google_drive_offer_folder_id(google_drive_folder_url)
+            if column['id'] == 'status7':
+                processed_offer_info['status'] = column['text']
 
+            elif column['id'] == '_____':
+                raw_google_drive_folder_url = column['text']
+                google_drive_folder_id = self._get_google_drive_offer_folder_id(raw_google_drive_folder_url)
                 processed_offer_info['google_drive_folder_id'] = google_drive_folder_id
 
         processed_offer_info['creation_timestamp'] = time.time()

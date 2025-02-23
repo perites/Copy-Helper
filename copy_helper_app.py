@@ -1,4 +1,3 @@
-# auto save img to hiven folder
 # TODO change logging  debug to info in some places
 
 import logging
@@ -6,9 +5,10 @@ import sys
 
 import copy_helper
 
+datefmt = '%d-%m %H:%M:%S:%M'
 logging.basicConfig(
     format='%(asctime)s [%(levelname)s] : %(message)s',
-    datefmt='%d-%m %H:%M:%S:%M',
+    datefmt=datefmt,
     level=logging.DEBUG,
     handlers=[
         logging.StreamHandler(sys.stdout),
@@ -138,4 +138,3 @@ if __name__ == "__main__":
             logging.critical('Got Unexpected Error!')
             logging.exception(e)
             print('Returning to main page')
-            main_page()
