@@ -211,48 +211,28 @@ class DomainGoogleSheetsHelper(google_services.GoogleSheets):
         priority_product_index += 1
 
         text_value = cls.get_data_from_range(priority_products_table_id, f'{page}!C{priority_product_index}')[0][0]
-
-        if priority_link_info:
+        url = cls.get_table_unsub_url(priority_products_table_id, page, priority_product_index)
+        if priority_link_info and priority_link_info['Type']:
             match priority_link_info['Type']:
                 case 'VolumeGreen':
                     id = cls.get_data_from_range(priority_products_table_id, f'{page}!E{priority_product_index}')
-                    if not id:
-                        logging.warning('VolumeGreen was not found in priority table, using default link')
-                        url = cls.get_data_from_range(priority_products_table_id, f'{page}!F{priority_product_index}')
-                        if not url:
-                            logging.warning('Url not found')
-                            url = ''
-                        else:
-                            url = url[0][0]
-                    else:
+                    if id:
                         url = priority_link_info['Start'] + id[0][0] + priority_link_info['End']
-
-                case '':
-                    url = cls.get_data_from_range(priority_products_table_id, f'{page}!F{priority_product_index}')
-                    if not url:
-                        logging.warning('Url not found')
-                        url = ''
                     else:
-                        url = url[0][0]
-
-                case _:
-                    logging.warning('Unsupported priority link type, returning regular url')
-                    url = cls.get_data_from_range(priority_products_table_id, f'{page}!F{priority_product_index}')
-                    if not url:
-                        logging.warning('Url not found')
-                        url = ''
-                    else:
-                        url = url[0][0]
-
-        else:
-            url = cls.get_data_from_range(priority_products_table_id, f'{page}!F{priority_product_index}')
-            if not url:
-                logging.warning('Url not found')
-                url = ''
-            else:
-                url = url[0][0]
+                        logging.warning('VolumeGreen was not found in priority table, using default link')
 
         return text_value, url
+
+    @classmethod
+    def get_table_unsub_url(cls, priority_products_table_id, page, priority_product_index):
+        url = cls.get_data_from_range(priority_products_table_id, f'{page}!F{priority_product_index}')
+        if not url:
+            logging.warning('Url not found')
+            url = ''
+        else:
+            url = url[0][0]
+
+        return url
 
 
 class Domain:
