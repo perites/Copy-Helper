@@ -82,7 +82,9 @@ def main_page():
             exit()
 
         case 'clear-cache':
-            pass
+            print('Please specify clear all cache or specific offer, note that cache auto refreshes every 6 hours')
+            option = cinput()
+            copy_helper.Offer.clear_cache(option)
 
         case 'add-domain':
             cprint('To create new domain enter name it below. Name should be same as in broadcast')
