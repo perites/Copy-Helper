@@ -20,6 +20,7 @@ class GeneralSettings:
     default_style_settings: dict
     anti_spam_replacements: dict
     save_image_path: str
+    logging_level: str
 
     @classmethod
     def set_settings(cls):
@@ -39,6 +40,7 @@ class GeneralSettings:
         cls.anti_spam_replacements = settings_dict['AntiSpamReplacements']
         cls.machine_id = cls.get_unique_machine_id()
         cls.save_image_path = settings_dict['AutoImagesSavePath']
+        cls.logging_level = settings_dict['InformationLevel']
 
     @classmethod
     def create_settings(cls):
@@ -50,6 +52,7 @@ class GeneralSettings:
             "FolderWithPartners": "1-WFEkKNjVjaJDNt2XKBeJhpIQUviBVim",
             "PriorityProductsTableId": "1e40khWM1dKTje_vZi4K4fL-RA8-D6jhp2wmZSXurQH0",
             "DirectoryToStoreResults": "",
+            "InformationLevel": "All",
             "DomainsShortNames": {
                 "DOMAIN_ABR": "DomainNameAsInBroadcast"
             },
