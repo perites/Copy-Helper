@@ -49,6 +49,10 @@ class OfferGoogleDriveHelper(google_services.GoogleDrive):
             return None, None
 
         lift_folder = cls.get_folder_by_name(f"Lift {lift_number}", google_drive_folder_id)
+        if not lift_folder:
+            cls.complain_about_offer(f'{name} - something wrong with lift folders, probably its missing')
+            return '', ''
+
         lift_folder_files = cls.get_files_from_folder(lift_folder['id'])
 
         lift_file = None
@@ -88,16 +92,18 @@ class OfferGoogleDriveHelper(google_services.GoogleDrive):
         logging.warning(f'No Partners with offer {name} was found in GoogleDrive')
 
     @classmethod
-    def _get_offer_folder_id(cls, name):
-        offer_general_folder = cls._get_offer_general_folder(name)
+    def _get_offer_folder_id(cls, name=None, offer_general_folder=None):
+        offer_general_folder = cls._get_offer_general_folder(name) if not offer_general_folder else offer_general_folder
         if not offer_general_folder:
             return
 
-        offer_folder_id = cls.get_folder_by_name('HTML+SL', offer_general_folder, strict=False)[0]
+        offer_folder_id = cls.get_folder_by_name('HTML+SL', offer_general_folder, strict=False)
         if not offer_folder_id:
-            logging.warning(
+            logging.debug(
                 f'Folder "HTML+SL" was not found for offer {name}. Folder id where searching: {offer_general_folder}')
-        return offer_folder_id
+            return
+
+        return offer_folder_id['id']
 
 
 class Offer(OfferGoogleDriveHelper):
@@ -196,9 +202,26 @@ class Offer(OfferGoogleDriveHelper):
 
         return processed_offer_info
 
-    def _get_google_drive_offer_folder_id(self, google_drive_offer_folder_url):
-        if google_drive_offer_folder_url:
-            google_drive_folder_id = google_drive_offer_folder_url.split('/folders/')[1]
+    @classmethod
+    def complain_about_offer(cls, text):
+        logging.warning(f'Something wrong with offer. Details : {text}')
+        with open('SystemData/wrong_moday_offers.txt', 'a', encoding='utf-8') as file:
+            file.write(text + '\n')
+
+    def _get_google_drive_offer_folder_id(self, raw_google_drive_offer_folder_url):
+        if raw_google_drive_offer_folder_url:
+            logging.debug('Checking in folder in Monday actually for HTML+SL folder')
+
+            raw_google_drive_folder_id = raw_google_drive_offer_folder_url.split('/folders/')[1]
+            maybe_google_drive_folder_id = self._get_offer_folder_id(offer_general_folder=raw_google_drive_folder_id)
+
+            if not maybe_google_drive_folder_id:
+                return raw_google_drive_folder_id
+
+            self.complain_about_offer(f'{self.name} - wrong link for google drive in Monday')
+
+            return maybe_google_drive_folder_id
+
         else:
             logging.info(f'Google drive offer folder url was not found in Monday, starting manual search')
             google_drive_folder_id = self._get_offer_folder_id(self.name)
@@ -217,6 +240,7 @@ class Offer(OfferGoogleDriveHelper):
             case _:
                 all_cache = cls._get_cache()
                 if not all_cache.get(option):
+                    logging.warning(f'Can`t clear cache of {option} as it is NOT found in cache')
                     return
 
                 del all_cache[option]
