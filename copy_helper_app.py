@@ -1,25 +1,9 @@
 # TODO change logging  debug to info in some places
 # TODO move get_priority_footer_values to offer
 import logging
-import sys
-
+import logger
 import copy_helper
 import os
-
-datefmt = '%d-%m %H:%M:%S:%M'
-logging.basicConfig(
-    format='%(asctime)s [%(levelname)s] : %(message)s',
-    datefmt=datefmt,
-    level=logging.DEBUG,
-    handlers=[
-        logging.StreamHandler(sys.stdout),
-        logging.FileHandler('main-log', mode='a', encoding='utf-8', )
-    ]
-)
-logging.getLogger("googleapiclient").setLevel(logging.WARNING)
-logging.getLogger('PIL').setLevel(logging.WARNING)
-logging.getLogger("requests").setLevel(logging.WARNING)
-logging.getLogger("urllib3").setLevel(logging.WARNING)
 
 
 def cprint(*args, **kwargs):
@@ -166,7 +150,11 @@ def main_page():
 if __name__ == "__main__":
     cprint('Welcome to copy-helper alfa test')
 
+    logging.root = logger.logger
+
     copy_helper.settings.GeneralSettings.set_settings()
+    logger.configure_console_logger(copy_helper.settings.GeneralSettings.logging_level)
+
     while True:
         try:
             main_page()
