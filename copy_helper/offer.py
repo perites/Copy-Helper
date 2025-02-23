@@ -26,7 +26,8 @@ class OfferInfo:
         tracking_id_to_monday_id = {
             'volume_green': '_____8',
             'img_it': 'text0',
-            'rt_tm': 'text21__1'
+            'rt_tm': 'text21__1',
+            'cm_tm': 'dup__of_rt_tm_mkn9g0sh'
         }
         monday_id = tracking_id_to_monday_id.get(tracking_id_name)
         if monday_id:

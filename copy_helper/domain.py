@@ -321,10 +321,10 @@ class Domain:
                                     tracking_link_info[
                                         'End'] + f'{copy.offer.info.tracking_id('img_it')}_{copy.lift_number}{copy.img_code}'
 
-                case 'CT TM':
-                    tracking_link = tracking_link_info['Start'] + copy.offer.info.tracking_id('ct_tm') + \
+                case 'CM TM':
+                    tracking_link = tracking_link_info['Start'] + copy.offer.info.tracking_id('cm_tm') + \
                                     tracking_link_info[
-                                        'End'] + f'{copy.offer.info.tracking_id('ct_tm')}_{copy.lift_number}{copy.img_code}'
+                                        'End'] + f'{copy.offer.info.tracking_id('cm_tm')}_{copy.lift_number}{copy.img_code}'
                 case _:
                     logging.warning(f"Got unsupported link type {tracking_link_info['Type']}")
                     tracking_link = tracking_link_info['Start'] + "UNSUPPORTED_TYPE" + tracking_link_info[
