@@ -63,10 +63,14 @@ class ImageHelper:
         src_part_pattern = r'src="[^"]*'
 
         src_list = re.findall(src_part_pattern, lift_file_content)
-        if len(src_list) == 0 and copy.img_code:
-            logging.info('Copy has img code and doesnt contain images')
-            lift_file_content = cls.add_image_block(copy, lift_file_content, image_block)
-            return lift_file_content
+        if len(src_list) == 0:
+            if copy.img_code:
+                logging.info('Copy has img code and doesnt contain images')
+                lift_file_content = cls.add_image_block(copy, lift_file_content, image_block)
+                return lift_file_content
+            else:
+                logging.debug('No images no image code, doing nothing')
+                return
 
         if settings.GeneralSettings.save_image_path:
             logging.info(f'Found {len(src_list)} images, saving...')

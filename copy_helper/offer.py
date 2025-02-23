@@ -150,18 +150,20 @@ class Offer(OfferGoogleDriveHelper):
     def _find_cached_info(self):
         offers_info_cache = self._get_cache()
         offer_cached_info = offers_info_cache.get(self.name)
+
         if not offer_cached_info:
             logging.debug(f'Offer {self.name} was not found in cache')
             offer_cached_info = self._set_offer_cache()
         elif offer_cached_info['creation_timestamp'] + MAX_CACHE_DURATION_SECONDS < time.time():
             logging.debug(f'Cache for offer {self.name} expired')
             offer_cached_info = self._set_offer_cache()
+        else:
+            logging.debug(f'Found valid cache for {self.name}')
 
-        logging.debug(f'Found valid cache for {self.name}')
         return offer_cached_info
 
     def _set_offer_cache(self):
-        logging.debug(f'Caching info for offer {self.name}')
+        logging.debug(f'Getting new info to cache for offer {self.name}')
 
         raw_offer_info = self._get_raw_offer_info()
         offer_info = self._process_raw_offer_info(raw_offer_info)
