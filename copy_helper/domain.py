@@ -260,6 +260,7 @@ class Domain:
         self.name = domain_name
         self.settings = DomainSettings.create_from_dict(self.get_file_data('settings'))
         self.gsh_helper = DomainGoogleSheetsHelper()
+        self.gsh_helper.set_sheet_service()
 
         default_style_settings = settings.GeneralSettings.default_style_settings
         user_domain_styles_settings = self.settings.styles_settings
@@ -371,6 +372,7 @@ class Domain:
 
     @staticmethod
     def get_copy_file_content(copy_file):
+        google_services.GoogleDrive.set_drive_service()
         copy_file_content = google_services.GoogleDrive.get_file_content(copy_file)
         if not copy_file_content:
             logging.warning(f'Could not receive content of file {copy_file}')
