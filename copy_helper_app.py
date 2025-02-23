@@ -148,9 +148,9 @@ def main_page():
 
 
 if __name__ == "__main__":
-    cprint('Welcome to copy-helper alfa test')
-
     logging.root = logger.logger
+
+    cprint('Welcome to copy-helper alfa test')
 
     copy_helper.settings.GeneralSettings.set_settings()
     logger.configure_console_logger(copy_helper.settings.GeneralSettings.logging_level)

@@ -16,23 +16,22 @@ class ServicesHelper:
     def get_service(cls, service_name):
         match service_name:
             case "drive":
-                scopes = ['https://www.googleapis.com/auth/drive']
                 version = "v3"
 
             case "sheets":
-                scopes = ['https://www.googleapis.com/auth/spreadsheets.readonly']
                 version = "v4"
 
             case _:
-                logging.warning(f'No information was found for this service {service_name} returning None')
                 return
 
-        service = build(service_name, version, credentials=cls.get_credentials(scopes), cache_discovery=False)
+        service = build(service_name, version, credentials=cls.get_credentials(), cache_discovery=False)
         return service
 
     @staticmethod
-    def get_credentials(scopes):
+    def get_credentials():
         creds = None
+
+        scopes = ['https://www.googleapis.com/auth/drive', 'https://www.googleapis.com/auth/spreadsheets.readonly']
 
         path_system_data_folder = 'SystemData/'
         if not os.path.exists(path_system_data_folder):
@@ -63,11 +62,7 @@ class ServicesHelper:
 
 
 class GoogleDrive:
-    drive_service = None
-
-    @classmethod
-    def set_drive_service(cls):
-        cls.drive_service = ServicesHelper.get_service('drive')
+    drive_service = ServicesHelper.get_service('drive')
 
     @classmethod
     def execute_query(cls, query, fields='files(id, name)'):
@@ -135,12 +130,8 @@ class GoogleDrive:
 
 
 class GoogleSheets:
-    sheet_service = None
+    sheet_service = ServicesHelper.get_service('sheets')
     cache = {}
-
-    @classmethod
-    def set_sheet_service(cls):
-        cls.sheet_service = ServicesHelper.get_service('sheets')
 
     @classmethod
     def get_new_data_from_range(cls, spreadsheet_id, range):
