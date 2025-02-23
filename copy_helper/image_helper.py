@@ -4,22 +4,46 @@ import requests
 import os
 
 import logging
+from PIL import Image
 
 
 class ImageHelper:
     @classmethod
     def save_image(cls, image_file_name, image_url):
-        save_image_path = settings.GeneralSettings.save_image_path
-        full_image_path = f'{save_image_path}/{image_file_name}'
+        try:
+            save_image_path = settings.GeneralSettings.save_image_path
+            temp_full_image_path = f'{save_image_path}/{image_file_name}'
 
-        if not os.path.exists(full_image_path):
+            with os.scandir(save_image_path) as entries:
+                for entry in entries:
+                    if entry.is_file() and image_file_name in entry.name:
+                        logging.debug(f'Not saving {image_file_name} - image already saved')
+                        return
+
             logging.debug(f'Saving {image_file_name} to {save_image_path}')
-            response = requests.get(image_url)
-            with open(full_image_path, 'wb') as file:
-                file.write(response.content)
 
-        else:
-            logging.debug(f'Not saving {image_file_name} - image already saved')
+            with open(temp_full_image_path, 'wb') as file:
+                response = requests.get(image_url, stream=True)
+                if not response.ok:
+                    logging.warning(
+                        f'Error while saving image {image_file_name}. Request status code {response.status_code}')
+
+                for chunk in response.iter_content(512):
+                    file.write(chunk)
+
+            img = Image.open(temp_full_image_path)
+            ext = img.format.lower()
+            img.close()
+
+            new_full_image_path = temp_full_image_path + f'.{ext}'
+
+            os.rename(temp_full_image_path, new_full_image_path)
+
+
+
+
+        except Exception as e:
+            logging.exception(f'Error while saving image {image_file_name}')
 
     @classmethod
     def add_image_block(cls, copy, lift_file_content, image_block):
@@ -44,9 +68,7 @@ class ImageHelper:
             logging.info(f'Found {len(src_list)} images, saving...')
             for index, src_part in enumerate(src_list):
                 img_url = src_part.split('"')[1]
-                file_extension = img_url.split('.')[::-1][0]
-                image_file_name = f'{str(copy)}-image-{index + 1}.{file_extension}'
 
-                cls.save_image(image_file_name, img_url)
+                cls.save_image(f'{str(copy)}-image-{index + 1}', img_url)
 
         return lift_file_content

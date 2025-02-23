@@ -44,8 +44,7 @@ class DomainStylesHelper:
             'Privacy Policy',
             'unsubscribe here',
             'unsubscribe',
-            'Click here',
-            'click here',
+            'here',
         ]
 
         for keyword in footer_link_keywords:
@@ -190,7 +189,7 @@ class DomainGoogleSheetsHelper(google_services.GoogleSheets):
             logging.warning(f'Could not find copies in range {copies_range} in Broadcast')
             return
 
-        return copies_for_domain.split(' ')
+        return copies_for_domain.strip().split(' ')
 
     @classmethod
     def get_priority_footer_values(cls, offer_name, priority_link_info):

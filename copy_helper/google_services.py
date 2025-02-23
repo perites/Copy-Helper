@@ -144,9 +144,9 @@ class GoogleSheets:
     def get_data_from_range(cls, spreadsheet_id, range):
         request = (spreadsheet_id, range)
 
-        values = cls.cache.get(request)
-        if values:
-            return values
+        # values = cls.cache.get(request)
+        # if values:
+        #     return values
 
         values = cls.get_new_data_from_range(*request)
 

@@ -15,7 +15,10 @@ logging.basicConfig(
         logging.FileHandler('main-log', mode='a', encoding='utf-8', )
     ]
 )
-logging.getLogger("googleapiclient.discovery").setLevel(logging.WARNING)
+logging.getLogger("googleapiclient").setLevel(logging.WARNING)
+logging.getLogger('PIL').setLevel(logging.WARNING)
+logging.getLogger("requests").setLevel(logging.WARNING)
+logging.getLogger("urllib3").setLevel(logging.WARNING)
 
 
 def cprint(*args, **kwargs):
@@ -92,7 +95,7 @@ def main_page():
             if not copies:
                 cprint(
                     'Copies were not found for some reason, you can enter them manually (separated by space as in brodcast) or just press enter to return to begining')
-                copies = cinput().split(' ')
+                copies = cinput().strip().split(' ')
 
             copies = list(filter(lambda copy: copy, map(copy_helper.Copy.create, copies)))
 
