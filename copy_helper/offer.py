@@ -253,7 +253,7 @@ class Offer(OfferGoogleDriveHelper):
         match option:
             case 'all':
                 cls._set_cache({})
-
+                logging.info('All cache successfully cleared')
             case _:
                 all_cache = cls._get_cache()
                 if not all_cache.get(option):
@@ -262,6 +262,7 @@ class Offer(OfferGoogleDriveHelper):
 
                 del all_cache[option]
                 cls._set_cache(all_cache)
+                logging.info(f'Cache for offer {option} cleared')
 
 
 class OfferException(Exception):
