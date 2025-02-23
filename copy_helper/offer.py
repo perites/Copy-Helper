@@ -113,7 +113,6 @@ class Offer(OfferGoogleDriveHelper):
     def __init__(self, name):
         self.name = name
         self.info = self.get_offer_info()
-        self.set_drive_service()
 
     def get_offer_info(self):
         logging.info(f'Searching info for offer {self.name}')
