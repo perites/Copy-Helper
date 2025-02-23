@@ -19,6 +19,7 @@ class GeneralSettings:
     priority_products_table_id: str
     default_style_settings: dict
     anti_spam_replacements: dict
+    save_image_path: str
 
     @classmethod
     def set_settings(cls):
@@ -37,6 +38,7 @@ class GeneralSettings:
         cls.default_style_settings = settings_dict['DefaultStyles']
         cls.anti_spam_replacements = settings_dict['AntiSpamReplacements']
         cls.machine_id = cls.get_unique_machine_id()
+        cls.save_image_path = settings_dict['AutoImagesSavePath']
 
     @classmethod
     def create_settings(cls):
@@ -58,7 +60,8 @@ class GeneralSettings:
                 "SidePadding": "30px",
                 "UpperDownPadding": "10px",
                 "AddAfterPriorityBlock": "<br><br>",
-                "PriorityFooterUrlTemplate": "<b><a target=\"_blank\" href=\"PRIORITY_FOOTER_URL\" style=\"text-decoration: underline; color: #ffffff;\">PRIORITY_FOOTER_TEXT_URL</a></b>"
+                "PriorityFooterUrlTemplate": "<b><a target=\"_blank\" href=\"PRIORITY_FOOTER_URL\" style=\"text-decoration: underline; color: #ffffff;\">PRIORITY_FOOTER_TEXT_URL</a></b>",
+                "ImageBlock": "<table align=\"center\"><tr>\n  <td height=\"20\" width=\"100%\" style=\"max-width: 100%\" class=\"horizontal-space\"></td>\n</tr>\n<tr>\n  <td class=\"img-bg-block\" align=\"center\">\n    <a href=\"urlhere\" target=\"_blank\">\n      <img alt=\"ALT_TEXT\" height=\"auto\" src=\"IMAGE_URL\" style=\"border:0;display:block;outline:none;text-decoration:none;height:auto;width:100%;max-width: 550px;font-size:13px;\" width=\"280\" />\n        </a>\n  </td>\n</tr>\n<tr>\n  <td height=\"20\" width=\"100%\" style=\"max-width: 100%\" class=\"horizontal-space\"></td>\n</tr></table>"
             },
             "AntiSpamReplacements": {
                 "A": "А",
@@ -111,7 +114,7 @@ class GeneralSettings:
                 "End": ""
             },
             "StylesSettings": {
-                "FontFamily": "Tahoma"
+
             }
         })
 

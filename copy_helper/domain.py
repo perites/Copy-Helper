@@ -36,6 +36,7 @@ class DomainStylesHelper:
         self.side_padding = styles_settings['SidePadding']
         self.upper_down_padding = styles_settings['UpperDownPadding']
         self.add_after_priority_block = styles_settings['AddAfterPriorityBlock']
+        self.image_block = styles_settings['ImageBlock']
 
     def make_priority_footer_html(self, footer_text, url):
         footer_link_keywords = [
