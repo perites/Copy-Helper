@@ -70,7 +70,7 @@ class ImageHelper:
                 return lift_file_content
             else:
                 logging.debug('No images no image code, doing nothing')
-                return
+                return lift_file_content
 
         if settings.GeneralSettings.save_image_path:
             logging.info(f'Found {len(src_list)} images, saving...')
