@@ -374,11 +374,10 @@ class Domain:
         return copy_file_content
 
     def save_copy_files(self, lift_file_content, sl_file_content, path_to_domain_results, str_copy,
-                        priority_info,
-                        tracking_link):
+                        priority_info, tracking_link, date):
         os.makedirs(path_to_domain_results, exist_ok=True)
         self.save_lift_file(lift_file_content, path_to_domain_results, str_copy, bool(priority_info['text']))
-        self.save_sl_file(sl_file_content, path_to_domain_results, str_copy, priority_info, tracking_link)
+        self.save_sl_file(sl_file_content, path_to_domain_results, str_copy, priority_info, tracking_link, date)
 
     def save_lift_file(self, lift_file_content, path_to_domain_results, str_copy, is_priority):
         try:
@@ -391,9 +390,9 @@ class Domain:
         except Exception:
             logging.exception(f'Error while saving lift file for {str_copy}')
 
-    def save_sl_file(self, sl_file_content, path_to_domain_results, str_copy, priority_info, tracking_link):
+    def save_sl_file(self, sl_file_content, path_to_domain_results, str_copy, priority_info, tracking_link, date):
         try:
-            path_to_sls_file = path_to_domain_results + f'SLs-{self.name}.txt'
+            path_to_sls_file = path_to_domain_results + f'SLs-{self.name}-{date}.txt'
             try:
                 with open(path_to_sls_file, 'r', encoding='utf-8') as file:
                     sls_file_content = file.read()

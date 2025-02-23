@@ -28,7 +28,7 @@ def cinput(hint=''):
     return input(prefix)
 
 
-def process_copy_files_content(domain, copy, path_to_domain_results, lift_file_content, sl_file_content):
+def process_copy_files_content(domain, copy, path_to_domain_results, lift_file_content, sl_file_content, date):
     tracking_link = domain.make_tracking_link(copy)
 
     footer_text, url = domain.gsh_helper.get_priority_footer_values(copy.offer.name, domain.settings.priority_link_info)
@@ -41,7 +41,7 @@ def process_copy_files_content(domain, copy, path_to_domain_results, lift_file_c
 
     if not lift_file_content:
         domain.save_copy_files(lift_file_content, sl_file_content, path_to_domain_results, str(copy),
-                               priority_info, tracking_link)
+                               priority_info, tracking_link, date)
         return
 
     lift_file_content = copy_helper.ImageHelper.process_images(copy, domain.styles_helper.image_block,
@@ -59,7 +59,7 @@ def process_copy_files_content(domain, copy, path_to_domain_results, lift_file_c
     lift_file_content = domain.add_link_to_lift(tracking_link, lift_file_content)
 
     domain.save_copy_files(lift_file_content, sl_file_content, path_to_domain_results, str(copy),
-                           priority_info, tracking_link)
+                           priority_info, tracking_link, date)
 
 
 def main_page():
@@ -101,7 +101,8 @@ def main_page():
             path_to_domain_results = copy_helper.settings.GeneralSettings.result_directory + f'/{domain.name}/{date.replace('/', '.')}/'
             for copy in copies:
                 lift_file_content, sl_file_content = domain.get_copy_files_content(copy)
-                process_copy_files_content(domain, copy, path_to_domain_results, lift_file_content, sl_file_content)
+                process_copy_files_content(domain, copy, path_to_domain_results, lift_file_content, sl_file_content,
+                                           date.replace('/', '.'))
 
         case 'apply-styles':
             cprint(
@@ -123,7 +124,7 @@ def main_page():
                 lift_file_content = file.read()
 
             process_copy_files_content(domain, copy_helper.Copy.create(str_copy), path_to_domain_results,
-                                       lift_file_content, "")
+                                       lift_file_content, "", date.replace('/', '.'))
 
 
 if __name__ == "__main__":
