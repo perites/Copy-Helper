@@ -123,6 +123,10 @@ class GoogleDrive:
                 logging.warning(f'Unknown mime_type {mime_type}, returning None')
                 return
 
+        if not content:
+            logging.warning(f'Could not get file content for file {file['name']} ')
+            return ''
+
         return content
 
     @staticmethod

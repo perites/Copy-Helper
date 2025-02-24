@@ -15,7 +15,7 @@ def cinput():
 def process_copy_files_content(domain, copy, path_to_domain_results, lift_file_content, sl_file_content, date):
     tracking_link = domain.make_tracking_link(copy)
 
-    if copy.offer.info.is_priority:
+    if copy.offer.is_priority:
         footer_text, url = domain.gsh_helper.get_priority_footer_values(copy.offer, domain.settings.priority_link_info)
         priority_info = {
             'text': footer_text,
@@ -154,7 +154,23 @@ def main_cycle():
 
             path_to_domain_results = copy_helper.settings.GeneralSettings.result_directory + f'/{domain.name}/{date.replace('/', '.')}/'
             for copy in copies:
-                lift_file_content, sl_file_content = domain.get_copy_files_content(copy)
+                # copy_maker
+                # copy_maker.get_copy_files()
+                # copy_maker.create_track_link()
+                # if copy_maker.copy.offer.is_priority:
+                #     get_priority_footer_values
+                #     make_priority_block
+                # if not lift_file_content:
+                #     save_copy_files
+                # process_images
+                # apply_styles
+                # if domain.settings.antispam:
+                #     ...
+                # add_template
+                # add_link_to_lift
+                # save_copy_files
+
+                lift_file_content, sl_file_content = copy.get_copy_files_content()
                 process_copy_files_content(domain, copy, path_to_domain_results, lift_file_content, sl_file_content,
                                            date.replace('/', '.'))
 
