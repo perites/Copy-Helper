@@ -293,19 +293,19 @@ class Domain:
 
             match tracking_link_info['Type']:
                 case "RT TM":
-                    tracking_link = tracking_link_info['Start'] + copy.offer.info.tracking_id('rt_tm') + \
+                    tracking_link = tracking_link_info['Start'] + copy.offer.tracking_id('rt_tm') + \
                                     tracking_link_info[
                                         'End'] + str(copy)
 
                 case 'VolumeGreen':
-                    tracking_link = tracking_link_info['Start'] + copy.offer.info.tracking_id('volume_green') + \
+                    tracking_link = tracking_link_info['Start'] + copy.offer.tracking_id('volume_green') + \
                                     tracking_link_info[
-                                        'End'] + f'{copy.offer.info.tracking_id('img_it')}_{copy.lift_number}{copy.img_code}'
+                                        'End'] + f'{copy.offer.tracking_id('img_it')}_{copy.lift_number}{copy.img_code}'
 
                 case 'CM TM':
-                    tracking_link = tracking_link_info['Start'] + copy.offer.info.tracking_id('cm_tm') + \
+                    tracking_link = tracking_link_info['Start'] + copy.offer.tracking_id('cm_tm') + \
                                     tracking_link_info[
-                                        'End'] + f'{copy.offer.info.tracking_id('cm_tm')}_{copy.lift_number}{copy.img_code}'
+                                        'End'] + f'{copy.offer.tracking_id('cm_tm')}_{copy.lift_number}{copy.img_code}'
                 case _:
                     logging.warning(f"Got unsupported link type {tracking_link_info['Type']}")
                     tracking_link = tracking_link_info['Start'] + "UNSUPPORTED_TYPE" + tracking_link_info[
@@ -327,36 +327,36 @@ class Domain:
             logging.info(f'No priority footer text was found for {offer_name}')
             return ''
 
-    def get_copy_files_content(self, copy):
-        try:
-            lift_file, sl_file = copy.offer.get_copy_files(copy.lift_number)
-
-            if lift_file:
-                lift_file_content = self.get_copy_file_content(lift_file)
-            else:
-                logging.warning(f'Could not get lift file for offer {copy.offer.name}')
-                lift_file_content = ''
-
-            if sl_file:
-                sl_file_content = self.get_copy_file_content(sl_file)
-            else:
-                logging.warning(f'Could not get sl file for offer {copy.offer.name}')
-                sl_file_content = ''
-
-            return lift_file_content, sl_file_content
-
-        except Exception:
-            logging.exception(f'Error while receiving lift files for copy {str(copy)}')
-            return None, None
-
-    @staticmethod
-    def get_copy_file_content(copy_file):
-        copy_file_content = google_services.GoogleDrive.get_file_content(copy_file)
-        if not copy_file_content:
-            logging.warning(f'Could not receive content of file {copy_file}')
-            return ''
-
-        return copy_file_content
+    # def get_copy_files_content(self, copy):
+    #     try:
+    #         lift_file, sl_file = copy.offer.get_copy_files(copy.lift_number)
+    #
+    #         if lift_file:
+    #             lift_file_content = self.get_copy_file_content(lift_file)
+    #         else:
+    #             logging.warning(f'Could not get lift file for offer {copy.offer.name}')
+    #             lift_file_content = ''
+    #
+    #         if sl_file:
+    #             sl_file_content = self.get_copy_file_content(sl_file)
+    #         else:
+    #             logging.warning(f'Could not get sl file for offer {copy.offer.name}')
+    #             sl_file_content = ''
+    #
+    #         return lift_file_content, sl_file_content
+    #
+    #     except Exception:
+    #         logging.exception(f'Error while receiving lift files for copy {str(copy)}')
+    #         return None, None
+    #
+    # @staticmethod
+    # def get_copy_file_content(copy_file):
+    #     copy_file_content = google_services.GoogleDrive.get_file_content(copy_file)
+    #     if not copy_file_content:
+    #         logging.warning(f'Could not receive content of file {copy_file}')
+    #         return ''
+    #
+    #     return copy_file_content
 
     def save_copy_files(self, lift_file_content, sl_file_content, path_to_domain_results, str_copy,
                         priority_info, tracking_link, date):
