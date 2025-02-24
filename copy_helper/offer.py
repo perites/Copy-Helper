@@ -9,8 +9,6 @@ from . import settings
 from . import tools
 from . import paths
 
-PATH_TO_OFFERS_INFO_CACHE = paths.PATH_TO_JSON_FILE_OFFERS_CACHE.full_path()
-
 MAX_CACHE_DURATION_SECONDS = 60 * 60 * 6
 
 ALLOWED_STATUSES = ['Live', 'Restricted']
@@ -73,15 +71,15 @@ class OfferGoogleDriveHelper(google_services.GoogleDrive):
 
         return offer_folder_id['id']
 
-   
+
 class OfferCacheHelper:
 
     @staticmethod
     def _get_cache():
         logging.debug('Getting all offers info cache')
-        offers_info_cache = tools.read_json_file(PATH_TO_OFFERS_INFO_CACHE)
+        offers_info_cache = tools.read_json_file(paths.PATH_TO_FILE_OFFERS_CACHE)
         # try:
-        #     offers_info_cache = tools.read_json_file(PATH_TO_OFFERS_INFO_CACHE)
+        #     offers_info_cache = tools.read_json_file(PATH_TO_FILE_OFFERS_CACHE)
         # except FileNotFoundError:
         #     return {}
 
@@ -90,7 +88,7 @@ class OfferCacheHelper:
     @staticmethod
     def _set_cache(new_offers_info_cache):
         logging.debug('Setting new offers info cache')
-        tools.write_json_file(PATH_TO_OFFERS_INFO_CACHE, new_offers_info_cache)
+        tools.write_json_file(paths.PATH_TO_FILE_OFFERS_CACHE, new_offers_info_cache)
 
     @classmethod
     def _set_offer_cache(cls, offer_info):
