@@ -1,20 +1,5 @@
-import dataclasses
+PATH_TO_FOLDER_SYSTEM_DATA = 'SystemData/'
+PATH_TO_FOLDER_GENERAL_SETTINGS = 'Settings/'
+PATH_TO_FOLDER_DOMAINS_SETTINGS = PATH_TO_FOLDER_GENERAL_SETTINGS + 'Domains/'
 
-
-@dataclasses.dataclass
-class FolderPath:
-    path: str
-
-
-@dataclasses.dataclass
-class FilePath:
-    path_to_folder: FolderPath
-    name: str
-    is_json: bool
-
-    def full_path(self):
-        return self.path_to_folder.path + self.name
-
-
-PATH_TO_FOLDER_SYSTEM_DATA = FolderPath('SystemData/')
-PATH_TO_JSON_FILE_OFFERS_CACHE = FilePath(PATH_TO_FOLDER_SYSTEM_DATA, 'offers_info_cache.json', True)
+PATH_TO_FILE_OFFERS_CACHE = PATH_TO_FOLDER_SYSTEM_DATA + 'offers_info_cache.json'

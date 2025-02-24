@@ -1,5 +1,4 @@
 # TODO change logging  debug to info in some places
-# TODO move get_priority_footer_values to offer
 import logging
 import logger
 import copy_helper
@@ -11,6 +10,14 @@ def cinput():
     prefix = f'{datetime.datetime.now():{logger.datefmt}} [INPUT] > '
     return input(prefix).strip()
 
+
+#
+# try:
+#     self.domain = domain.Domain(domain_name)
+# except FileNotFoundError:
+#     logging.info(
+#         f'Cant find domain {domain_name}, ensure that you entering name correctly and {domain_name} in {paths.PATH_TO_DOMAIN_SETTINGS.full_path()}')
+#     return
 
 def process_copy_files_content(domain, copy, path_to_domain_results, lift_file_content, sl_file_content, date):
     tracking_link = domain.make_tracking_link(copy)
@@ -148,12 +155,12 @@ def main_cycle():
             if not str_copies:
                 return
 
-            copies = list(filter(lambda copy: copy, map(copy_helper.Copy.create, str_copies)))
+            copies = list(filter(lambda copy: copy, map(copy_helper.CopyInfo.create, str_copies)))
 
             logging.info(f'Successfully processed {len(copies)} copies.')
 
             path_to_domain_results = copy_helper.settings.GeneralSettings.result_directory + f'/{domain.name}/{date.replace('/', '.')}/'
-            for copy in copies:
+            for copy_info in copies:
                 # copy_maker
                 # copy_maker.get_copy_files()
                 # copy_maker.create_track_link()
@@ -170,8 +177,9 @@ def main_cycle():
                 # add_link_to_lift
                 # save_copy_files
 
-                lift_file_content, sl_file_content = copy.get_copy_files_content()
-                process_copy_files_content(domain, copy, path_to_domain_results, lift_file_content, sl_file_content,
+                lift_file_content, sl_file_content = copy_info.get_copy_files_content()
+                process_copy_files_content(domain, copy_info, path_to_domain_results, lift_file_content,
+                                           sl_file_content,
                                            date.replace('/', '.'))
 
             logging.info(f'Finished making domain {domain.name} for date {date}')
@@ -195,14 +203,15 @@ def main_cycle():
                     lift_file_content = file.read()
 
             except FileNotFoundError:
-                logging.warning('Copy file not found')
+                logging.warning('CopyInfo file not found')
                 return
 
-            process_copy_files_content(domain, copy_helper.Copy.create(str_copy), path_to_domain_results,
+            process_copy_files_content(domain, copy_helper.CopyInfo.create(str_copy), path_to_domain_results,
                                        lift_file_content, "", date.replace('/', '.'))
 
 
 if __name__ == "__main__":
+
     logging.root = logger.logger
 
     logging.info('Welcome to copy-helper test')

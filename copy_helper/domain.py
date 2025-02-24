@@ -370,7 +370,7 @@ class Domain:
             path = path_to_domain_results + f'{file_name}.html'
             with open(path, 'w', encoding='utf-8') as file:
                 file.write(lift_file_content)
-                logging.info(f'Successfully saved Copy file for {str_copy}')
+                logging.info(f'Successfully saved lift file for {str_copy}')
 
         except Exception:
             logging.exception(f'Error while saving lift file for {str_copy}')
