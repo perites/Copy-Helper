@@ -1,9 +1,9 @@
 import dataclasses
 import logging
-import os
 import re
 
 from . import google_services
+from . import paths
 from . import settings
 from . import tools
 
@@ -166,7 +166,7 @@ class DomainStylesHelper:
 
 class DomainGoogleSheetsHelper(google_services.GoogleSheets):
     @classmethod
-    def get_copies(cls, name, page, date):
+    def _get_copies(cls, name, page, broadcast_date):
 
         broadcast_id = settings.GeneralSettings.broadcast_id
 
@@ -176,9 +176,9 @@ class DomainGoogleSheetsHelper(google_services.GoogleSheets):
             logging.warning(f'Could not find domain {name} in Broadcast')
             return
 
-        date_index = cls.get_table_index_of_value(broadcast_id, date, f'{page}!A:A', False)
+        date_index = cls.get_table_index_of_value(broadcast_id, broadcast_date, f'{page}!A:A', False)
         if not domain_index:
-            logging.warning(f'Could not find date {date} in Broadcast')
+            logging.warning(f'Could not find date {broadcast_date} in Broadcast')
             return
 
         date_row = date_index + 1
@@ -235,18 +235,17 @@ class DomainGoogleSheetsHelper(google_services.GoogleSheets):
         return url
 
 
-class Domain:
+class Domain(DomainStylesHelper, DomainGoogleSheetsHelper):
     def __init__(self, domain_name):
         self.name = domain_name
         self.settings = DomainSettings.create_from_dict(self.get_file_data('settings'))
-        self.gsh_helper = DomainGoogleSheetsHelper()
 
         default_style_settings = settings.GeneralSettings.default_style_settings
         user_domain_styles_settings = self.settings.styles_settings
-        self.styles_helper = DomainStylesHelper({**default_style_settings, **user_domain_styles_settings})
+        super().__init__({**default_style_settings, **user_domain_styles_settings})
 
     def get_file_data(self, file_name):
-        path_to_domain = f'Settings/Domains/{self.name}'
+        path_to_domain = paths.PATH_TO_FOLDER_DOMAINS_SETTINGS + self.name
         match file_name:
             case 'settings':
                 return tools.read_json_file(f'{path_to_domain}/settings.json')
@@ -255,8 +254,8 @@ class Domain:
                 with open(f'{path_to_domain}/template.html', 'r', encoding='utf-8') as file:
                     return file.read()
 
-    def get_copies(self, date):
-        return self.gsh_helper.get_copies(self.name, self.settings.page, date)
+    def get_copies(self, broadcast_date):
+        return self._get_copies(self.name, self.settings.page, broadcast_date)
 
     def apply_styles(self, lift_file_html, str_copy):
         logging.debug(f'Applying styles to copy {str_copy}')
@@ -357,57 +356,3 @@ class Domain:
     #         return ''
     #
     #     return copy_file_content
-
-    def save_copy_files(self, lift_file_content, sl_file_content, path_to_domain_results, str_copy,
-                        priority_info, tracking_link, date):
-        os.makedirs(path_to_domain_results, exist_ok=True)
-        self.save_lift_file(lift_file_content, path_to_domain_results, str_copy, bool(priority_info['text']))
-        self.save_sl_file(sl_file_content, path_to_domain_results, str_copy, priority_info, tracking_link, date)
-
-    def save_lift_file(self, lift_file_content, path_to_domain_results, str_copy, is_priority):
-        try:
-            file_name = str_copy + ('-Priority' if is_priority else '')
-            path = path_to_domain_results + f'{file_name}.html'
-            with open(path, 'w', encoding='utf-8') as file:
-                file.write(lift_file_content)
-                logging.info(f'Successfully saved lift file for {str_copy}')
-
-        except Exception:
-            logging.exception(f'Error while saving lift file for {str_copy}')
-
-    def save_sl_file(self, sl_file_content, path_to_domain_results, str_copy, priority_info, tracking_link, date):
-        try:
-            path_to_sls_file = path_to_domain_results + f'SLs-{self.name}-{date}.txt'
-            try:
-                with open(path_to_sls_file, 'r', encoding='utf-8') as file:
-                    sls_file_content = file.read()
-
-                    if str_copy in sls_file_content:
-                        logging.info(f'Did not add sls for {str_copy} in SLs.txt file as it already have them')
-                        return
-
-            except FileNotFoundError:
-                pass
-
-            url_info = ''
-            if priority_info['text']:
-                url_info = f'Unsub link:\n{priority_info['url']}\n\n'
-
-            copy_sls = (
-
-                    str_copy + ('-Priority' if bool(priority_info['text']) else '') + '\n\n' +
-
-                    f'Tracking link:\n{tracking_link}\n\n' + url_info +
-
-                    'Sls:\n' +
-
-                    sl_file_content +
-
-                    "\n----------------------------------------\n\n\n\n")
-
-            with open(path_to_sls_file, 'a', encoding='utf-8') as file:
-                file.write(copy_sls)
-                logging.info(f'Successfully saved add sls for {str_copy} in SLs.txt')
-
-        except Exception:
-            logging.exception(f'Error while adding sls for {str_copy} in SLs.txt')

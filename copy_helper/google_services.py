@@ -1,14 +1,14 @@
 import logging
 import os
+from io import BytesIO
 
+from docx import Document
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 
-from io import BytesIO
-from docx import Document
-from . import tools
+from . import paths
 
 
 class ServicesHelper:
@@ -33,11 +33,7 @@ class ServicesHelper:
 
         scopes = ['https://www.googleapis.com/auth/drive', 'https://www.googleapis.com/auth/spreadsheets.readonly']
 
-        path_system_data_folder = 'SystemData/'
-        if not os.path.exists(path_system_data_folder):
-            os.makedirs(path_system_data_folder)
-
-        path_to_credentials = path_system_data_folder + 'services_token.json'
+        path_to_credentials = paths.PATH_TO_FOLDER_SYSTEM_DATA + 'services_token.json'
 
         if os.path.exists(path_to_credentials):
             creds = Credentials.from_authorized_user_file(path_to_credentials, scopes)
@@ -52,11 +48,7 @@ class ServicesHelper:
                     file.write(creds.to_json())
                 return creds
 
-        path_to_user_oauth_data = 'SystemData/OAuth 2.0 Client ID.json'
-        if not os.path.exists(path_to_user_oauth_data):
-            logging.warning('Put OAuth 2.0 Client ID.json inside SystemData folder')
-            exit()
-        flow = InstalledAppFlow.from_client_secrets_file(path_to_user_oauth_data, scopes)
+        flow = InstalledAppFlow.from_client_secrets_file(paths.PATH_TO_FILE_OAUTH, scopes)
         creds = flow.run_local_server(port=0)
 
         with open(path_to_credentials, 'w', encoding='utf-8') as file:

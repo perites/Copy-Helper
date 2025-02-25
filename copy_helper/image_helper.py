@@ -1,10 +1,11 @@
-from . import settings
-import re
-import requests
-import os
-
 import logging
+import os
+import re
+
+import requests
 from PIL import Image
+
+from . import settings
 
 
 class ImageHelper:
