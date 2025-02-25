@@ -5,9 +5,9 @@ import time
 import requests
 
 from . import google_services
+from . import paths
 from . import settings
 from . import tools
-from . import paths
 
 MAX_CACHE_DURATION_SECONDS = 60 * 60 * 6
 

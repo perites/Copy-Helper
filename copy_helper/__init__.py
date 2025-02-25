@@ -1,6 +1,7 @@
-from .settings import *
-from .domain import *
-from .offer import *
+import logger
 
-from .image_helper import *
-from .copy_maker import *
+from . import copy_maker
+from . import domain
+from . import offer
+from . import settings
+from .paths import create_new_domain
