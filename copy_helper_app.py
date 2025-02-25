@@ -1,6 +1,7 @@
 import datetime
 import logging
 import os
+import traceback
 
 import copy_helper
 import logger
@@ -122,7 +123,7 @@ def main_cycle():
             logging.info(
                 'Please specify clear all cache or specific offer, note that cache auto refreshes every 6 hours')
             option = cinput()
-            copy_helper.offer.Offer.clear_cache(option)
+            copy_helper.offer.OffersCache.clear_cache(option)
 
         case 'add-domain':
             logging.info('To create new domain enter name it below. Name should be same as in broadcast')
@@ -152,14 +153,21 @@ def main_cycle():
             if not str_copies:
                 return
 
-            # copies = list(filter(lambda copy: copy, map(copy_helper.CopyInfo.create, str_copies)))
-
-            # logging.info(f'Successfully processed {len(copies)} copies.')
-
-            # path_to_domain_results = copy_helper.settings.GeneralSettings.result_directory + f'/{domain.name}/{date.replace('/', '.')}/'
             for str_copy in str_copies:
-                copy_maker = copy_helper.copy_maker.CopyMaker(domain, str_copy, broadcast_date.replace('/', '.'))
-                copy_maker.make_copy()
+                try:
+                    copy_maker = copy_helper.copy_maker.CopyMaker(domain, str_copy, broadcast_date.replace('/', '.'))
+                    copy_maker.make_copy()
+                except copy_helper.copy_maker.CopyMakerException as e:
+                    logging.error(
+                        f'Error while making copy {str_copy} for domain {domain.name} for date {broadcast_date}. Details : {e}')
+
+                except copy_helper.offer.OfferException as e:
+                    logging.error(f'Error with offer {e.offer_name}. Details : {e}')
+
+                except Exception as e:
+                    logging.error(f'Unknown error while making copy {str_copy}. Details : {e}')
+                    logging.debug(traceback.format_exc())
+
                 # copy_maker
                 # copy_maker.get_copy_files()
                 # copy_maker.create_track_link()
