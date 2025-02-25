@@ -66,7 +66,7 @@ def create_new_domain(domain_name):
         logging.warning('Domain Name cant be empty')
         return
     logging.info('Creating new Domain')
-    domain_folder_path = PATH_TO_FOLDER_DOMAINS_SETTINGS + domain_name
+    domain_folder_path = PATH_TO_FOLDER_DOMAINS_SETTINGS + f'{domain_name}/'
     try:
         os.makedirs(domain_folder_path)
     except FileExistsError:
