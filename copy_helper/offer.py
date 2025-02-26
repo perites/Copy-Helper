@@ -58,6 +58,36 @@ class OffersCache:
 class OfferGoogleDriveHelper:
 
     @staticmethod
+    def get_copy_files(lift_folder):
+        lift_folder_files = google_services.GoogleDrive.get_files_from_folder(lift_folder['id'])
+
+        lift_file = None
+        mjml_found = False
+
+        sl_file = None
+
+        for file in lift_folder_files:
+            if not mjml_found:
+                if (file['name'].lower().endswith('.html')) and ('mjml' in file['name'].lower()) and (
+                        'SL' not in file['name']):
+                    lift_file = file
+                    mjml_found = True
+                    logging.debug(f"Found copy file (mjml): {lift_file['name']}")
+
+                elif (not lift_file) and (file['name'].lower().endswith('.html')) and ('SL' not in file['name']):
+                    lift_file = file
+
+            if not sl_file:
+                if 'sl' in file['name'].lower():
+                    sl_file = file
+                    logging.debug(f"Found SL file: {sl_file['name']}")
+
+            if mjml_found and sl_file:
+                break
+
+        return lift_file, sl_file
+
+    @staticmethod
     def get_offer_general_folder(offer_name):
         for partner_folder in google_services.GoogleDrive.get_folders_of_folder(
                 settings.GeneralSettings.parent_folder_id):
@@ -69,8 +99,8 @@ class OfferGoogleDriveHelper:
 
         logging.warning(f'No Partners with offer {offer_name} was found in GoogleDrive')
 
-    @classmethod
-    def get_offer_folder_id(cls, offer_name, offer_general_folder):
+    @staticmethod
+    def get_offer_folder_id(offer_name, offer_general_folder):
         offer_folder_id = google_services.GoogleDrive.get_folder_by_name('HTML+SL', offer_general_folder, strict=False)
         if not offer_folder_id:
             logging.debug(
@@ -78,6 +108,19 @@ class OfferGoogleDriveHelper:
             return
 
         return offer_folder_id['id']
+
+
+class OfferGoogleSheetHelper:
+    @staticmethod
+    def get_priority_offer_coordinates(offer_name, pages_to_search):
+        for page in pages_to_search:
+            priority_product_index = google_services.GoogleSheets.get_table_index_of_value(
+                settings.GeneralSettings.priority_products_table_id, offer_name, f'{page}!A:A', is_row=False)
+
+            if priority_product_index:
+                return priority_product_index, page
+
+        return False, False
 
 
 class OfferInfoFinder:
@@ -208,6 +251,44 @@ class Offer:
             _raw_column_values=offer_info['raw_column_values'],
             _raw_offer_info=offer_info
         )
+
+    def get_priority_footer_values(self, priority_unsub_link_info):
+        logging.debug(f'Searching for footer for offer {self.name}')
+
+        priority_product_index, page = OfferGoogleSheetHelper.get_priority_offer_coordinates(self.name,
+                                                                                             ['Other PP', 'FIT'])
+
+        if not priority_product_index:
+            self.is_priority = False
+            self.update_priority(False)
+            return '', ''
+
+        priority_products_table_id = settings.GeneralSettings.priority_products_table_id
+
+        priority_product_index += 1
+
+        text_value = google_services.GoogleSheets.get_data_from_range(priority_products_table_id,
+                                                                      f'{page}!C{priority_product_index}')[0][0]
+
+        unsub_url = google_services.GoogleSheets.get_data_from_range(priority_products_table_id,
+                                                                     f'{page}!F{priority_product_index}')
+        if not unsub_url:
+            logging.warning('Unsub url not found')
+            unsub_url = 'UNSUB_URL_NOT_FOUND'
+        else:
+            unsub_url = unsub_url[0][0]
+
+        if unsub_link_type := priority_unsub_link_info.get('Type'):
+            match unsub_link_type:
+                case 'VolumeGreen':
+                    id = google_services.GoogleSheets.get_data_from_range(priority_products_table_id,
+                                                                          f'{page}!E{priority_product_index}')
+                    if id:
+                        unsub_url = priority_unsub_link_info['Start'] + id[0][0] + priority_unsub_link_info['End']
+                    else:
+                        logging.warning('VolumeGreen was not found in priority table, using default link')
+
+        return text_value, unsub_url
 
     def update_offer_cache(self, key, new_value):
         offer_info = self._raw_offer_info

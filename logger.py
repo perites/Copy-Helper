@@ -39,6 +39,3 @@ def configure_console_logger(user_log_level):
         logger.info('Unknown information level, set to All')
 
     console_handler.setLevel(logging_level)
-
-
-logging.root = logger
