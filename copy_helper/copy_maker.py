@@ -64,7 +64,7 @@ class CopyMakerHelpers:
         if not match:
             raise WrongPatterForCopy(str_copy)
 
-        return match.group(1), match.group(2), match.group(3)
+        return match.group(1), match.group(2), match.group(3).replace('/','-')
 
 
 class CopyMaker(CopyMakerHelpers):
