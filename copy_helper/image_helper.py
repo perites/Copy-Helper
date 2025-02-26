@@ -13,12 +13,12 @@ class ImageHelper:
     @classmethod
     def save_image(cls, image_file_name, image_url, date):
         try:
-            save_image_path = f'{settings.GeneralSettings.save_image_path}/{date}'
+            save_image_path = settings.GeneralSettings.save_image_path +f'{date}/'
 
             if not os.path.exists(save_image_path):
                 os.makedirs(save_image_path)
 
-            temp_full_image_path = f'{save_image_path}/{image_file_name}'
+            temp_full_image_path = save_image_path + image_file_name
 
             with os.scandir(save_image_path) as entries:
                 for entry in entries:
