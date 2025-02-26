@@ -1,3 +1,4 @@
+import dataclasses
 import logging
 import os
 import re
@@ -10,11 +11,36 @@ from . import settings
 from . import styles_helper
 
 
+@dataclasses.dataclass
 class Copy:
     lift_file_content: str = ''
     sl_file_content: str = ''
     tracking_link: str = 'LINK_NOT_MAID'
-    priority_info: dict[str:str] = {'text': None, 'url': None, 'html_block': '', }
+    priority_info: dict[str:str] = dataclasses.field(
+        default_factory=lambda: {'text': '', 'url': '', 'html_block': ''}
+    )
+
+
+@dataclasses.dataclass
+class Results:
+    str_copy: str
+    is_raw_lift_file_found: bool = True
+    is_raw_sl_file_found: bool = False
+    is_priority_footer_found: bool = False
+    images_saved: int = 0
+    is_image_block_added: bool = False
+    is_antispammed: bool = False
+
+    def __str__(self):
+        return (f'{self.str_copy} results: copy file {self.to_str(self.is_raw_sl_file_found)} | '
+                f'sl file {self.to_str(self.is_raw_sl_file_found)} | '
+                f'pfooter {self.to_str(self.is_priority_footer_found)} | '
+                f'images saved {self.images_saved} | '
+                f'img block created {self.to_str(self.is_image_block_added)} | '
+                f'antispammed {self.to_str(self.is_antispammed)}')
+
+    def to_str(self, value):
+        return '+' if value else '-'
 
 
 class CopyMakerHelpers:
@@ -56,6 +82,7 @@ class CopyMaker(CopyMakerHelpers):
         self.offer = offer.Offer.find(offer_name)
 
         self.copy = Copy()
+        self.results = Results(self.str_copy)
 
     def set_result_directory(self):
         match settings.GeneralSettings.result_directory_type:
@@ -198,10 +225,17 @@ class CopyMaker(CopyMakerHelpers):
     def process_images(self):
         """Processing Images"""
 
-        self.copy.lift_file_content = image_helper.ImageHelper.process_images(self.copy.lift_file_content,
-                                                                              self.str_copy,
-                                                                              self.styles_helper.image_block,
-                                                                              self.img_code, self.date)
+        self.copy.lift_file_content, imgs_info = image_helper.ImageHelper.process_images(self.copy.lift_file_content,
+                                                                                         self.str_copy,
+                                                                                         self.styles_helper.image_block,
+                                                                                         self.img_code, self.date)
+
+        if imgs_info == -1:
+            pass
+        elif imgs_info == 0:
+            self.results.is_image_block_added = True
+        else:
+            self.results.images_saved = imgs_info
 
     @CopyMakerHelpers.catch_errors
     def apply_styles(self):
@@ -227,16 +261,25 @@ class CopyMaker(CopyMakerHelpers):
         else:
             self.set_content_from_local()
 
+        if self.copy.lift_file_content:
+            self.results.is_raw_lift_file_found = True
+        if self.copy.sl_file_content:
+            self.results.is_raw_sl_file_found = True
+
         self.make_tracking_link()
         if self.offer.is_priority:
             self.get_priority_info()
 
+        if self.copy.priority_info['html_block']:
+            self.results.is_priority_footer_found = True
+
         if not self.copy.lift_file_content:
             self.save_copy_files()
-            return
+            return self.results
 
         if self.domain.settings.antispam:
             self.antispam_content()
+            self.results.is_antispammed = True
 
         self.process_images()
         self.apply_styles()
@@ -244,6 +287,8 @@ class CopyMaker(CopyMakerHelpers):
         self.add_link_to_html()
 
         self.save_copy_files()
+
+        return self.results
 
 
 class CopyMakerException(Exception):

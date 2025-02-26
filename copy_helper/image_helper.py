@@ -67,10 +67,10 @@ class ImageHelper:
             if img_code:
                 logging.info('Copy has img code and doesnt contain images')
                 lift_file_content = cls.add_image_block(lift_file_content, str_copy, image_block)
-                return lift_file_content
+                return lift_file_content, 0
             else:
                 logging.debug('No images no image code, doing nothing')
-                return lift_file_content
+                return lift_file_content, -1
 
         if settings.GeneralSettings.save_image_path:
             logging.info(f'Found {len(src_list)} images, saving...')
@@ -79,4 +79,4 @@ class ImageHelper:
 
                 cls.save_image(f'{str_copy}-image-{index + 1}', img_url, date)
 
-        return lift_file_content
+        return lift_file_content, len(src_list)

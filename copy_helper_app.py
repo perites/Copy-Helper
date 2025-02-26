@@ -103,10 +103,12 @@ def main_cycle():
             if not str_copies:
                 return
 
+            copies_results = []
             for str_copy in str_copies:
                 try:
                     copy_maker = copy_helper.copy_maker.CopyMaker(domain, str_copy, broadcast_date.replace('/', '.'))
-                    copy_maker.make_copy()
+                    results = copy_maker.make_copy()
+                    copies_results.append(results)
                 except copy_helper.copy_maker.CopyMakerException as e:
                     logging.error(
                         f'Error while making copy {str_copy} for domain {domain.name} for date {broadcast_date}. Details : {e}')
@@ -119,6 +121,9 @@ def main_cycle():
                     logging.debug(traceback.format_exc())
 
             logging.info(f'Finished making domain {domain.name} for date {broadcast_date}')
+            for results in copies_results:
+                logging.info(str(results))
+                
             logging.info('======================')
 
         case 'apply-styles':
@@ -132,8 +137,8 @@ def main_cycle():
 
             try:
                 copy_maker = copy_helper.copy_maker.CopyMaker(domain, str_copy, broadcast_date.replace('/', '.'))
-                copy_maker.make_copy(set_content_from_local=True)
-
+                results = copy_maker.make_copy(set_content_from_local=True)
+                logging.info(str(results))
             except copy_helper.copy_maker.CopyMakerException as e:
                 logging.error(
                     f'Error while making copy {str_copy} for domain {domain.name} for date {broadcast_date}. Details : {e}')
@@ -150,7 +155,7 @@ def main_cycle():
 
 
 if __name__ == "__main__":
-    logging.root = logger
+    logging.root = logger.logger
     import copy_helper
 
     logger.configure_console_logger(copy_helper.settings.GeneralSettings.logging_level)
