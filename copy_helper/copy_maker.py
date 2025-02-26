@@ -64,7 +64,7 @@ class CopyMakerHelpers:
         if not match:
             raise WrongPatterForCopy(str_copy)
 
-        return match.group(1), match.group(2), match.group(3).replace('/','-')
+        return match.group(1), match.group(2), match.group(3)
 
 
 class CopyMaker(CopyMakerHelpers):
@@ -77,8 +77,8 @@ class CopyMaker(CopyMakerHelpers):
         user_domain_styles_settings = self.domain.settings.styles_settings
         self.styles_helper = styles_helper.StylesHelper({**default_style_settings, **user_domain_styles_settings})
 
-        self.str_copy = str_copy
-        offer_name, self.lift_number, self.img_code = self.get_info_from_str_copy(str_copy)
+        self.str_copy = str_copy.replace('/','-')
+        offer_name, self.lift_number, self.img_code = self.get_info_from_str_copy(self.str_copy)
         self.offer = offer.Offer.find(offer_name)
 
         self.copy = Copy()
