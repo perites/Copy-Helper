@@ -5,56 +5,61 @@ import time
 import requests
 
 from . import google_services
+from . import paths
 from . import settings
 from . import tools
-
-PATH_TO_OFFERS_INFO_CACHE = 'SystemData/offers_info_cache.json'
 
 MAX_CACHE_DURATION_SECONDS = 60 * 60 * 6
 
 ALLOWED_STATUSES = ['Live', 'Restricted']
 
 
-@dataclasses.dataclass
-class OfferInfo:
-    name: str
-    status: str
-    google_drive_folder_id: str
-    _raw_column_values: dict
-    is_priority: bool
+class OffersCache:
 
-    def tracking_id(self, tracking_id_name):
-        tracking_id_to_monday_id = {
-            'volume_green': '_____8',
-            'img_it': 'text0',
-            'rt_tm': 'text21__1',
-            'cm_tm': 'dup__of_rt_tm_mkn9g0sh'
-        }
-        monday_id = tracking_id_to_monday_id.get(tracking_id_name)
-        if monday_id:
-            for column in self._raw_column_values:
-                if column['id'] == monday_id:
-                    return column['text']
+    @staticmethod
+    def get_cache():
+        logging.debug('Getting all offers info cache')
+        offers_info_cache = tools.read_json_file(paths.PATH_TO_FILE_OFFERS_CACHE)
 
-        return f'{tracking_id_name}_NOT_FOUND'
+        return offers_info_cache
 
-
-class OfferGoogleDriveHelper(google_services.GoogleDrive):
+    @staticmethod
+    def set_cache(new_offers_info_cache):
+        logging.debug('Setting new offers info cache')
+        tools.write_json_file(paths.PATH_TO_FILE_OFFERS_CACHE, new_offers_info_cache)
 
     @classmethod
-    def _get_copy_files(cls, name, google_drive_folder_id, lift_number):
-        logging.info(f'Searching for lift files for offer {name} and lift {lift_number}')
+    def set_offer_cache(cls, offer_info):
 
-        if not google_drive_folder_id:
-            logging.warning('No Google Drive folder id was provided, lift files not received')
-            return None, None
+        offers_info_cache = cls.get_cache()
+        offers_info_cache[offer_info['name']] = offer_info
 
-        lift_folder = cls.get_folder_by_name(f"Lift {lift_number}", google_drive_folder_id)
-        if not lift_folder:
-            cls.complain_about_offer(f'{name} - something wrong with lift folders, probably its missing')
-            return '', ''
+        cls.set_cache(offers_info_cache)
 
-        lift_folder_files = cls.get_files_from_folder(lift_folder['id'])
+        return offer_info
+
+    @classmethod
+    def clear_cache(cls, option):
+        match option:
+            case 'all':
+                cls.set_cache({})
+                logging.info('All cache successfully cleared')
+            case _:
+                all_cache = cls.get_cache()
+                if not all_cache.get(option):
+                    logging.warning(f'Can`t clear cache of {option} as it is NOT found in cache')
+                    return
+
+                del all_cache[option]
+                cls.set_cache(all_cache)
+                logging.info(f'Cache for offer {option} cleared')
+
+
+class OfferGoogleDriveHelper:
+
+    @staticmethod
+    def get_copy_files(lift_folder):
+        lift_folder_files = google_services.GoogleDrive.get_files_from_folder(lift_folder['id'])
 
         lift_file = None
         mjml_found = False
@@ -82,195 +87,254 @@ class OfferGoogleDriveHelper(google_services.GoogleDrive):
 
         return lift_file, sl_file
 
-    @classmethod
-    def _get_offer_general_folder(cls, name):
-        for partner_folder in cls.get_folders_of_folder(settings.GeneralSettings.parent_folder_id):
+    @staticmethod
+    def get_offer_general_folder(offer_name):
+        for partner_folder in google_services.GoogleDrive.get_folders_of_folder(
+                settings.GeneralSettings.parent_folder_id):
+
             partner_folder_id = partner_folder['id']
-            offer_general_folder = cls.get_folder_by_name(name, partner_folder_id, False)
+            offer_general_folder = google_services.GoogleDrive.get_folder_by_name(offer_name, partner_folder_id, False)
             if offer_general_folder:
                 return offer_general_folder
 
-        logging.warning(f'No Partners with offer {name} was found in GoogleDrive')
+        logging.warning(f'No Partners with offer {offer_name} was found in GoogleDrive')
 
-    @classmethod
-    def _get_offer_folder_id(cls, name=None, offer_general_folder=None):
-        offer_general_folder = cls._get_offer_general_folder(name) if not offer_general_folder else offer_general_folder
-        if not offer_general_folder:
-            return
-
-        offer_folder_id = cls.get_folder_by_name('HTML+SL', offer_general_folder, strict=False)
+    @staticmethod
+    def get_offer_folder_id(offer_name, offer_general_folder):
+        offer_folder_id = google_services.GoogleDrive.get_folder_by_name('HTML+SL', offer_general_folder, strict=False)
         if not offer_folder_id:
             logging.debug(
-                f'Folder "HTML+SL" was not found for offer {name}. Folder id where searching: {offer_general_folder}')
+                f'Folder "HTML+SL" was not found for offer {offer_name}. Folder id where searching: {offer_general_folder}')
             return
 
         return offer_folder_id['id']
 
 
-class Offer(OfferGoogleDriveHelper):
-    name: str
-
-    def __init__(self, name):
-        self.name = name
-        self.info = self.get_offer_info()
-
-    def get_offer_info(self):
-        logging.info(f'Searching info for offer {self.name}')
-
-        offer_info = self._find_cached_info()
-
-        if offer_info['status'] not in ALLOWED_STATUSES:
-            raise OfferNotAllowedToSend(self.name)
-
-        return OfferInfo(name=offer_info['name'],
-                         status=offer_info['status'],
-                         google_drive_folder_id=offer_info['google_drive_folder_id'],
-                         _raw_column_values=offer_info['raw_column_values'],
-                         is_priority=offer_info['is_priority']
-                         )
-
-    def get_copy_files(self, lift_number):
-        return self._get_copy_files(self.name, self.info.google_drive_folder_id, lift_number)
-
+class OfferGoogleSheetHelper:
     @staticmethod
-    def _get_cache():
-        logging.debug('Getting offers info cache')
-        try:
-            offers_info_cache = tools.read_json_file(PATH_TO_OFFERS_INFO_CACHE)
-        except FileNotFoundError:
-            return {}
+    def get_priority_offer_coordinates(offer_name, pages_to_search):
+        for page in pages_to_search:
+            priority_product_index = google_services.GoogleSheets.get_table_index_of_value(
+                settings.GeneralSettings.priority_products_table_id, offer_name, f'{page}!A:A', is_row=False)
 
-        return offers_info_cache
+            if priority_product_index:
+                return priority_product_index, page
 
-    @staticmethod
-    def _set_cache(new_offers_info_cache):
-        logging.debug('Setting new offers info cache')
-        tools.write_json_file(PATH_TO_OFFERS_INFO_CACHE, new_offers_info_cache)
+        return False, False
 
-    def _find_cached_info(self):
-        offers_info_cache = self._get_cache()
-        offer_cached_info = offers_info_cache.get(self.name)
+
+class OfferInfoFinder:
+    def __init__(self, offer_name):
+        self.name = offer_name
+
+    def find_offer_info(self):
+        offer_cached_info = OffersCache.get_cache().get(self.name)
 
         if not offer_cached_info:
             logging.debug(f'Offer {self.name} was not found in cache')
-            offer_cached_info = self._set_offer_cache()
+            offer_info = self._get_new_offer_info()
+            OffersCache.set_offer_cache(offer_info)
+
         elif offer_cached_info['creation_timestamp'] + MAX_CACHE_DURATION_SECONDS < time.time():
             logging.debug(f'Cache for offer {self.name} expired')
-            offer_cached_info = self._set_offer_cache()
+            offer_info = self._get_new_offer_info()
+            OffersCache.set_offer_cache(offer_info)
+
         else:
             logging.debug(f'Found valid cache for {self.name}')
-
-        return offer_cached_info
-
-    def _set_offer_cache(self):
-        logging.debug(f'Getting new info to cache for offer {self.name}')
-
-        raw_offer_info = self._get_raw_offer_info()
-        offer_info = self._process_raw_offer_info(raw_offer_info)
-
-        offers_info_cache = self._get_cache()
-        offers_info_cache[self.name] = offer_info
-
-        self._set_cache(offers_info_cache)
+            offer_info = offer_cached_info
 
         return offer_info
 
-    def update_offer_cache(self, key, new_value):
-        offer_info = self._find_cached_info()
-        offer_info[key] = new_value
+    def complain(self, text):
+        logging.warning(f'Something wrong with offer {self.name}. Details : {text}')
+        with open(paths.PATH_TO_FOLDER_SYSTEM_DATA + 'wrong_offers.txt', 'a', encoding='utf-8') as file:
+            file.write(text + '\n')
 
-        offers_info_cache = self._get_cache()
-        offers_info_cache[self.name] = offer_info
+    def _get_new_offer_info(self):
+        logging.debug(f'Getting new info to cache for offer {self.name}')
+        raw_offer_info = self._get_raw_offer_info()
+        offer_info = self._process_raw_offer_info(raw_offer_info)
 
-        self._set_cache(offers_info_cache)
-
-    def update_priority(self, new_value):
-        self.update_offer_cache('is_priority', new_value)
+        return offer_info
 
     def _get_raw_offer_info(self):
-        logging.debug(f'Getting info for name {self.name} from backend')
+        logging.info(f'Getting raw info for {self.name} from backend')
 
         offers_info_endpoint = 'https://prior-shea-inri-a582c73b.koyeb.app/monday/product/'
         offer_info_request = requests.get(
             offers_info_endpoint + self.name + f'?requester=copy-helper-{settings.GeneralSettings.machine_id}')
 
         if not offer_info_request.content:
-            logging.warning(f'Offer {self.name} was not found at backend')
-            return None
+            logging.debug(f'Offer {self.name} was not found at backend')
+            raise OfferNotFound(self.name)
 
         raw_offer_info = offer_info_request.json()
 
         return raw_offer_info
 
     def _process_raw_offer_info(self, raw_offer_info):
-        logging.debug('Processing raw offer info')
+        if not raw_offer_info:
+            raise OfferNotFound(self.name)
 
-        processed_offer_info = {'name': self.name, 'raw_column_values': raw_offer_info['column_values']}
+        logging.debug(f'Processing raw offer {self.name} info')
+
+        processed_offer_info = {'name': self.name, 'raw_column_values': raw_offer_info['column_values'],
+                                'creation_timestamp': time.time(),
+                                'is_priority': True}  # at first treat all offers as priority
+
         for column in raw_offer_info['column_values']:
             if column['id'] == 'status7':
                 processed_offer_info['status'] = column['text']
 
             elif column['id'] == '_____':
                 raw_google_drive_folder_url = column['text']
-                google_drive_folder_id = self._get_google_drive_offer_folder_id(raw_google_drive_folder_url)
-                processed_offer_info['google_drive_folder_id'] = google_drive_folder_id
+                google_drive_folder_id = self._find_offer_google_drive_folder_id(raw_google_drive_folder_url)
+                if not google_drive_folder_id:
+                    raise OfferFolderIdNotFound(self.name)
 
-        processed_offer_info['creation_timestamp'] = time.time()
-        processed_offer_info['is_priority'] = True  # at first treat all offers as priority
+                processed_offer_info['google_drive_folder_id'] = google_drive_folder_id
 
         return processed_offer_info
 
-    @classmethod
-    def complain_about_offer(cls, text):
-        logging.warning(f'Something wrong with offer. Details : {text}')
-        with open('SystemData/wrong_moday_offers.txt', 'a', encoding='utf-8') as file:
-            file.write(text + '\n')
-
-    def _get_google_drive_offer_folder_id(self, raw_google_drive_offer_folder_url):
+    def _find_offer_google_drive_folder_id(self, raw_google_drive_offer_folder_url):
         if raw_google_drive_offer_folder_url:
-            logging.debug('Checking in folder in Monday actually for HTML+SL folder')
+            logging.debug('Checking if folder in Monday actually for HTML+SL folder')
 
             raw_google_drive_folder_id = raw_google_drive_offer_folder_url.split('/folders/')[1]
-            maybe_google_drive_folder_id = self._get_offer_folder_id(offer_general_folder=raw_google_drive_folder_id)
+            maybe_google_drive_folder_id = OfferGoogleDriveHelper.get_offer_folder_id(self.name,
+                                                                                      raw_google_drive_folder_id)
 
-            if not maybe_google_drive_folder_id:
-                return raw_google_drive_folder_id
+            if maybe_google_drive_folder_id:
+                self.complain(f'{self.name} - wrong link for google drive in Monday')
+                return maybe_google_drive_folder_id
 
-            self.complain_about_offer(f'{self.name} - wrong link for google drive in Monday')
-
-            return maybe_google_drive_folder_id
+            return raw_google_drive_folder_id
 
         else:
-            logging.info(f'Google drive offer folder url was not found in Monday, starting manual search')
-            google_drive_folder_id = self._get_offer_folder_id(self.name)
+            logging.warning(f'Google drive offer folder url was not found in Monday, starting manual search')
+            self.complain(f'{self.name} - link for google drive missing in Monday')
+
+            offer_general_folder = OfferGoogleDriveHelper.get_offer_general_folder(self.name)
+            google_drive_folder_id = OfferGoogleDriveHelper.get_offer_folder_id(self.name, offer_general_folder)
 
         if not google_drive_folder_id:
-            logging.warning(f'Google drive folder id was not found for offer {self.name}, returning None')
+            logging.warning(f'Google drive folder id was not found for offer {self.name}')
 
         return google_drive_folder_id
 
-    @classmethod
-    def clear_cache(cls, option):
-        match option:
-            case 'all':
-                cls._set_cache({})
-                logging.info('All cache successfully cleared')
-            case _:
-                all_cache = cls._get_cache()
-                if not all_cache.get(option):
-                    logging.warning(f'Can`t clear cache of {option} as it is NOT found in cache')
-                    return
 
-                del all_cache[option]
-                cls._set_cache(all_cache)
-                logging.info(f'Cache for offer {option} cleared')
+@dataclasses.dataclass
+class Offer:
+    name: str
+    status: str
+    google_drive_folder_id: str
+    is_priority: bool
+    _raw_column_values: dict
+    _raw_offer_info: dict
+
+    @classmethod
+    def find(cls, offer_name):
+        offer_info = OfferInfoFinder(offer_name).find_offer_info()
+        if not offer_info:
+            raise OfferNotFound(offer_name)
+
+        if offer_info['status'] not in ALLOWED_STATUSES:
+            raise StatusNotAllowed(offer_name, offer_info['status'])
+
+        return cls(
+            name=offer_info['name'],
+            status=offer_info['status'],
+            google_drive_folder_id=offer_info['google_drive_folder_id'],
+            is_priority=offer_info['is_priority'],
+
+            _raw_column_values=offer_info['raw_column_values'],
+            _raw_offer_info=offer_info
+        )
+
+    def get_priority_footer_values(self, priority_unsub_link_info):
+        logging.debug(f'Searching for footer for offer {self.name}')
+
+        priority_product_index, page = OfferGoogleSheetHelper.get_priority_offer_coordinates(self.name,
+                                                                                             ['Other PP', 'FIT'])
+
+        if not priority_product_index:
+            self.is_priority = False
+            self.update_priority(False)
+            return '', ''
+
+        priority_products_table_id = settings.GeneralSettings.priority_products_table_id
+
+        priority_product_index += 1
+
+        text_value = google_services.GoogleSheets.get_data_from_range(priority_products_table_id,
+                                                                      f'{page}!C{priority_product_index}')[0][0]
+
+        unsub_url = google_services.GoogleSheets.get_data_from_range(priority_products_table_id,
+                                                                     f'{page}!F{priority_product_index}')
+        if not unsub_url:
+            logging.warning('Unsub url not found')
+            unsub_url = 'UNSUB_URL_NOT_FOUND'
+        else:
+            unsub_url = unsub_url[0][0]
+
+        if unsub_link_type := priority_unsub_link_info.get('Type'):
+            match unsub_link_type:
+                case 'VolumeGreen':
+                    id = google_services.GoogleSheets.get_data_from_range(priority_products_table_id,
+                                                                          f'{page}!E{priority_product_index}')
+                    if id:
+                        unsub_url = priority_unsub_link_info['Start'] + id[0][0] + priority_unsub_link_info['End']
+                    else:
+                        logging.warning('VolumeGreen was not found in priority table, using default link')
+
+        return text_value, unsub_url
+
+    def update_offer_cache(self, key, new_value):
+        offer_info = self._raw_offer_info
+        offer_info[key] = new_value
+
+        OffersCache.set_offer_cache(offer_info)
+
+    def update_priority(self, new_value):
+        self.update_offer_cache('is_priority', new_value)
+
+    def tracking_id(self, tracking_id_name):
+        tracking_id_to_monday_id = {
+            'volume_green': '_____8',
+            'img_it': 'text0',
+            'rt_tm': 'text21__1',
+            'cm_tm': 'dup__of_rt_tm_mkn9g0sh'
+        }
+        monday_id = tracking_id_to_monday_id.get(tracking_id_name)
+        if not monday_id:
+            logging.warning(f'{tracking_id_name} was not found for {self.name}')
+            return f'{tracking_id_name}_NOT_FOUND'
+
+        for column in self._raw_column_values:
+            if column['id'] == monday_id:
+                return column['text']
 
 
 class OfferException(Exception):
-    pass
+    def __init__(self, offer_name, message):
+        self.offer_name = offer_name
+        super().__init__(message)
 
 
-class OfferNotAllowedToSend(OfferException):
+class OfferNotFound(OfferException):
     def __init__(self, offer_name):
-        self.message = f'Offer {offer_name} status not in ALLOWED_STATUSES'
-        super().__init__(self.message)
+        message = f'Could not find info about {offer_name}'
+        super().__init__(offer_name, message)
+
+
+class OfferFolderIdNotFound(OfferException):
+    def __init__(self, offer_name):
+        message = f'Offer {offer_name} folder id with lifts was not found'
+        super().__init__(offer_name, message)
+
+
+class StatusNotAllowed(OfferException):
+    def __init__(self, offer_name, offer_status):
+        message = f'{offer_name} have status {offer_status}. Not allowed to send'
+        super().__init__(offer_name, message)
