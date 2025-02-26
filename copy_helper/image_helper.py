@@ -1,10 +1,12 @@
-from . import settings
-import re
-import requests
-import os
-
 import logging
+import os
+import re
+import traceback
+
+import requests
 from PIL import Image
+
+from . import settings
 
 
 class ImageHelper:
@@ -43,15 +45,13 @@ class ImageHelper:
 
             os.rename(temp_full_image_path, new_full_image_path)
 
-
-
-
         except Exception as e:
-            logging.exception(f'Error while saving image {image_file_name}')
+            logging.error(f'Error while saving image {image_file_name}. Details : {e}')
+            logging.debug(traceback.format_exc())
 
     @classmethod
-    def add_image_block(cls, copy, lift_file_content, image_block):
-        logging.info(f'Adding image block to copy {str(copy)}')
+    def add_image_block(cls, lift_file_content, str_copy, image_block):
+        logging.info(f'Adding image block to copy {str_copy}')
 
         lift_file_content = lift_file_content.replace('<br><br>',
                                                       f'<!-- image-block-start -->{image_block}<!-- image-block-end -->',
@@ -59,24 +59,24 @@ class ImageHelper:
         return lift_file_content
 
     @classmethod
-    def process_images(cls, copy, image_block, lift_file_content, date):
+    def process_images(cls, lift_file_content, str_copy, image_block, img_code, date):
         src_part_pattern = r'src="[^"]*'
 
         src_list = re.findall(src_part_pattern, lift_file_content)
         if len(src_list) == 0:
-            if copy.img_code:
+            if img_code:
                 logging.info('Copy has img code and doesnt contain images')
-                lift_file_content = cls.add_image_block(copy, lift_file_content, image_block)
-                return lift_file_content
+                lift_file_content = cls.add_image_block(lift_file_content, str_copy, image_block)
+                return lift_file_content, 0
             else:
                 logging.debug('No images no image code, doing nothing')
-                return lift_file_content
+                return lift_file_content, -1
 
         if settings.GeneralSettings.save_image_path:
             logging.info(f'Found {len(src_list)} images, saving...')
             for index, src_part in enumerate(src_list):
                 img_url = src_part.split('"')[1]
 
-                cls.save_image(f'{str(copy)}-image-{index + 1}', img_url, date)
+                cls.save_image(f'{str_copy}-image-{index + 1}', img_url, date)
 
-        return lift_file_content
+        return lift_file_content, len(src_list)
