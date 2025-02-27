@@ -77,7 +77,7 @@ class CopyMaker(CopyMakerHelpers):
         user_domain_styles_settings = self.domain.settings.styles_settings
         self.styles_helper = styles_helper.StylesHelper({**default_style_settings, **user_domain_styles_settings})
 
-        self.str_copy = str_copy.replace('/','-')
+        self.str_copy = str_copy.replace('/', '-')
         offer_name, self.lift_number, self.img_code = self.get_info_from_str_copy(self.str_copy)
         self.offer = offer.Offer.find(offer_name)
 
@@ -191,17 +191,20 @@ class CopyMaker(CopyMakerHelpers):
     @CopyMakerHelpers.catch_errors
     def get_priority_info(self):
         """Searching priority text and url in GoogleSheets"""
+        if self.offer.is_priority:
+            footer_text, url = self.offer.get_priority_footer_values(self.domain.settings.priority_unsub_link_info)
+            if footer_text:
+                logging.info(f'Priority footer was found for {self.offer.name}')
+            else:
+                logging.debug(f'Priority footer not found for {self.offer.name}')
+                return
 
-        footer_text, url = self.offer.get_priority_footer_values(self.domain.settings.priority_unsub_link_info)
-        if footer_text:
-            logging.info(f'Priority footer was found for {self.offer.name}')
-        else:
-            logging.debug(f'Priority footer not found for {self.offer.name}')
-            return
+            html_block = self.styles_helper.make_priority_footer_html(footer_text, url)
 
-        html_block = self.styles_helper.make_priority_footer_html(footer_text, url)
+            self.copy.priority_info = {'text': footer_text, 'url': url, 'html_block': html_block}
 
-        self.copy.priority_info = {'text': footer_text, 'url': url, 'html_block': html_block}
+            if self.copy.priority_info['html_block']:
+                self.results.is_priority_footer_found = True
 
     @CopyMakerHelpers.catch_errors
     def make_tracking_link(self):
@@ -213,13 +216,15 @@ class CopyMaker(CopyMakerHelpers):
     @CopyMakerHelpers.catch_errors
     def antispam_content(self):
         """Antispamming lift, sl and priority footer"""
+        if self.domain.settings.antispam:
+            self.copy.lift_file_content = self.styles_helper.antispam_text(self.copy.lift_file_content)
+            self.copy.sl_file_content = self.styles_helper.antispam_text(self.copy.sl_file_content)
 
-        self.copy.lift_file_content = self.styles_helper.antispam_text(self.copy.lift_file_content)
-        self.copy.sl_file_content = self.styles_helper.antispam_text(self.copy.sl_file_content)
+            if self.copy.priority_info['html_block']:
+                self.copy.priority_info['html_block'] = self.styles_helper.antispam_text(
+                    self.copy.priority_info['html_block'])
 
-        if self.copy.priority_info['html_block']:
-            self.copy.priority_info['html_block'] = self.styles_helper.antispam_text(
-                self.copy.priority_info['html_block'])
+            self.results.is_antispammed = True
 
     @CopyMakerHelpers.catch_errors
     def process_images(self):
@@ -267,19 +272,14 @@ class CopyMaker(CopyMakerHelpers):
             self.results.is_raw_sl_file_found = True
 
         self.make_tracking_link()
-        if self.offer.is_priority:
-            self.get_priority_info()
 
-        if self.copy.priority_info['html_block']:
-            self.results.is_priority_footer_found = True
+        self.get_priority_info()
 
         if not self.copy.lift_file_content:
             self.save_copy_files()
             return self.results
 
-        if self.domain.settings.antispam:
-            self.antispam_content()
-            self.results.is_antispammed = True
+        self.antispam_content()
 
         self.process_images()
         self.apply_styles()
