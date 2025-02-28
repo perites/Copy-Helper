@@ -169,6 +169,6 @@ class GoogleSheets:
         else:
             for index, table_row in enumerate(all_values):
 
-                data = table_row[0] if table_row else None
-                if data.strip() == value:
+                data = table_row[0].strip() if table_row else None
+                if data == value:
                     return index
