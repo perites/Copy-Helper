@@ -17,7 +17,7 @@ def get_added_domains(path_to_domains):
 
     for domain_folder_name in domain_folders_names:
         abr_found = False
-        for domain_abr, domain_full_name in copy_helper.settings.GeneralSettings.domains_short_names.items():
+        for domain_abr, domain_full_name in CopyMakerAPI.copy_helper.settings.GeneralSettings.domains_short_names.items():
             if domain_folder_name == domain_full_name:
                 added_domains.append(domain_abr + f' ({domain_folder_name})')
                 abr_found = True
@@ -30,7 +30,7 @@ def get_added_domains(path_to_domains):
 
 
 def get_domain_name(domain_identifier):
-    domain_name = copy_helper.settings.GeneralSettings.domains_short_names.get(domain_identifier)
+    domain_name = CopyMakerAPI.copy_helper.settings.GeneralSettings.domains_short_names.get(domain_identifier)
 
     if domain_name:
         return domain_name
@@ -43,7 +43,7 @@ def get_domain_name(domain_identifier):
 def get_domain(domain_identifier):
     domain_name = get_domain_name(domain_identifier)
     try:
-        domain = copy_helper.domain.Domain(domain_name)
+        domain = CopyMakerAPI.copy_helper.domain.Domain(domain_name)
         return domain
     except FileNotFoundError:
         logging.info(
@@ -73,7 +73,7 @@ def main_cycle():
             logging.info(
                 'Please specify clear all cache or specific offer, note that cache auto refreshes every 6 hours')
             option = cinput()
-            copy_helper.offer.OffersCache.clear_cache(option)
+            CopyMakerAPI.copy_helper.offer.OffersCache.clear_cache(option)
 
         case 'add-domain':
             logging.info('To create new domain enter name it below. Name should be same as in broadcast')
@@ -85,7 +85,7 @@ def main_cycle():
             logging.info(
                 'To make domain, enter <domain-name> <date>(same as column in broadcast)')
 
-            added_domains = get_added_domains(copy_helper.paths.PATH_TO_FOLDER_DOMAINS_SETTINGS)
+            added_domains = get_added_domains(CopyMakerAPI.copy_helper.paths.PATH_TO_FOLDER_DOMAINS_SETTINGS)
             logging.info(f'Added domains : {', '.join(added_domains)}')
 
             domain_name_date_str = cinput().split(' ')
@@ -106,14 +106,15 @@ def main_cycle():
             copies_results = []
             for str_copy in str_copies:
                 try:
-                    copy_maker = copy_helper.copy_maker.CopyMaker(domain, str_copy, broadcast_date.replace('/', '.'))
+                    copy_maker = CopyMakerAPI.copy_helper.copy_maker.CopyMaker(domain, str_copy,
+                                                                               broadcast_date.replace('/', '.'))
                     results = copy_maker.make_copy()
                     copies_results.append(results)
-                except copy_helper.copy_maker.CopyMakerException as e:
+                except CopyMakerAPI.copy_helper.copy_maker.CopyMakerException as e:
                     logging.error(
                         f'Error while making copy {str_copy} for domain {domain.name} for date {broadcast_date}. Details : {e}')
 
-                except copy_helper.offer.OfferException as e:
+                except CopyMakerAPI.copy_helper.offer.OfferException as e:
                     logging.error(f'Error with offer {e.offer_name}. Details : {e}')
 
                 except Exception as e:
@@ -123,7 +124,7 @@ def main_cycle():
             logging.info(f'Finished making domain {domain.name} for date {broadcast_date}')
             for results in copies_results:
                 logging.info(str(results))
-                
+
             logging.info('======================')
 
         case 'apply-styles':
@@ -136,7 +137,8 @@ def main_cycle():
                 return
 
             try:
-                copy_maker = copy_helper.copy_maker.CopyMaker(domain, str_copy, broadcast_date.replace('/', '.'))
+                copy_maker = copy_helper.copy_maker.CopyMaker(domain, str_copy,
+                                                              broadcast_date.replace('/', '.'))
                 results = copy_maker.make_copy(set_content_from_local=True)
                 logging.info(str(results))
             except copy_helper.copy_maker.CopyMakerException as e:
@@ -156,9 +158,9 @@ def main_cycle():
 
 if __name__ == "__main__":
     logging.root = logger.logger
-    import copy_helper
+    from CopyMakerAPI import copy_helper
 
-    logger.configure_console_logger(copy_helper.settings.GeneralSettings.logging_level)
+    logger.configure_console_logger(CopyMakerAPI.copy_helper.settings.GeneralSettings.logging_level)
 
     logging.info('Welcome to copy-helper test')
 

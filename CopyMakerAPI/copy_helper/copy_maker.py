@@ -9,6 +9,7 @@ from . import image_helper
 from . import offer
 from . import settings
 from . import styles_helper
+from . import domain
 
 
 @dataclasses.dataclass
@@ -68,10 +69,9 @@ class CopyMakerHelpers:
 
 
 class CopyMaker(CopyMakerHelpers):
-    def __init__(self, domain, str_copy, date):
-        self.domain = domain
+    def __init__(self, domain_name, str_copy, date):
+        self.domain = domain.Domain(domain_name)
         self.date = date
-        self.path_to_domain_results = self.set_result_directory()
 
         default_style_settings = settings.GeneralSettings.default_style_settings
         user_domain_styles_settings = self.domain.settings.styles_settings
@@ -83,21 +83,6 @@ class CopyMaker(CopyMakerHelpers):
 
         self.copy = Copy()
         self.results = Results(self.str_copy)
-
-    def set_result_directory(self):
-        match settings.GeneralSettings.result_directory_type:
-            case 'Domain-Date':
-                path_to_domain_results = settings.GeneralSettings.result_directory + f'{self.domain.name}/{self.date}/'
-
-            case 'Date-Domain':
-                path_to_domain_results = settings.GeneralSettings.result_directory + f'{self.date}/{self.domain.name}/'
-
-            case _:
-                logging.warning('Unknown type of ResultDirectoryType, setting default')
-                path_to_domain_results = settings.GeneralSettings.result_directory + f'{self.date}/{self.domain.name}/'
-
-        os.makedirs(path_to_domain_results, exist_ok=True)
-        return path_to_domain_results
 
     @CopyMakerHelpers.catch_errors
     def get_copy_files_content(self):
@@ -123,70 +108,6 @@ class CopyMaker(CopyMakerHelpers):
             self.copy.sl_file_content = google_services.GoogleDrive.get_file_content(sl_file)
         else:
             logging.warning(f'Sl file for {self.offer.name} was not found')
-
-    @CopyMakerHelpers.catch_errors
-    def set_content_from_local(self):
-        """"Searching for copy file locally"""
-
-        domain_lift_file_path = f'{self.path_to_domain_results + self.str_copy}.html'
-        logging.info(f'Trying to read {domain_lift_file_path}')
-        try:
-            with open(domain_lift_file_path, 'r', encoding='utf-8') as file:
-                self.copy.lift_file_content = file.read()
-
-        except FileNotFoundError:
-            logging.warning('Copy file not found')
-
-    def save_copy_files(self):
-        self.save_lift_file()
-        self.save_sl_file()
-
-    @CopyMakerHelpers.catch_errors
-    def save_lift_file(self):
-        """Saving Lift file locally"""
-
-        file_name = self.str_copy + ('-Priority' if self.offer.is_priority else '')
-        path = self.path_to_domain_results + f'{file_name}.html'
-        with open(path, 'w', encoding='utf-8') as file:
-            file.write(self.copy.lift_file_content)
-            logging.info(f'Successfully saved lift file for {self.str_copy}')
-
-    @CopyMakerHelpers.catch_errors
-    def save_sl_file(self):
-        """Saving Sl file to Sls.txt"""
-
-        path_to_sls_file = self.path_to_domain_results + f'SLs-{self.domain.name}-{self.date}.txt'
-
-        try:
-            with open(path_to_sls_file, 'r', encoding='utf-8') as file:
-                sls_file_content = file.read()
-
-                if self.str_copy in sls_file_content:
-                    logging.info(f'Did not add sls for {self.str_copy} in SLs.txt file as already has them')
-                    return
-
-        except FileNotFoundError:
-            pass
-
-        if self.offer.is_priority:
-            unsub_url_str = f'Unsub link:\n{self.copy.priority_info['url']}\n\n'
-        else:
-            unsub_url_str = ''
-
-        copy_sls = (
-                self.str_copy + ('-Priority' if self.offer.is_priority else '') + '\n\n' +
-
-                f'Tracking link:\n{self.copy.tracking_link}\n\n' + unsub_url_str +
-
-                'Sls:\n' +
-
-                self.copy.sl_file_content +
-
-                "\n----------------------------------------\n\n\n\n")
-
-        with open(path_to_sls_file, 'a', encoding='utf-8') as file:
-            file.write(copy_sls)
-            logging.info(f'Successfully add sls for {self.str_copy} in SLs.txt')
 
     @CopyMakerHelpers.catch_errors
     def get_priority_info(self):
@@ -261,10 +182,8 @@ class CopyMaker(CopyMakerHelpers):
         self.copy.lift_file_content = self.copy.lift_file_content.replace('urlhere', self.copy.tracking_link)
 
     def make_copy(self, set_content_from_local=False):
-        if not set_content_from_local:
-            self.get_copy_files_content()
-        else:
-            self.set_content_from_local()
+
+        self.get_copy_files_content()
 
         if self.copy.lift_file_content:
             self.results.is_raw_lift_file_found = True
@@ -276,8 +195,7 @@ class CopyMaker(CopyMakerHelpers):
         self.get_priority_info()
 
         if not self.copy.lift_file_content:
-            self.save_copy_files()
-            return self.results
+            return "sdmth"
 
         self.antispam_content()
 
@@ -285,8 +203,6 @@ class CopyMaker(CopyMakerHelpers):
         self.apply_styles()
         self.add_template()
         self.add_link_to_html()
-
-        self.save_copy_files()
 
         return self.results
 

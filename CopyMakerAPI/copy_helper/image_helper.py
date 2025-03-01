@@ -13,7 +13,7 @@ class ImageHelper:
     @classmethod
     def save_image(cls, image_file_name, image_url, date):
         try:
-            save_image_path = settings.GeneralSettings.save_image_path +f'{date}/'
+            save_image_path = settings.GeneralSettings.save_image_path + f'{date}/'
 
             if not os.path.exists(save_image_path):
                 os.makedirs(save_image_path)
