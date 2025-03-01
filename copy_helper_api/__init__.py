@@ -1,22 +1,20 @@
-import os
-
-from . import config
-from flask import request, Blueprint, g
-from .decorators import catch_errors, credentials_required, required_structure
 import logging
-import traceback
-from . import google_services_olapi
-from . import exceptions
-import google.oauth2.credentials
-from . import offer as offer_module
-from . import google_services
+
+from flask import request, Blueprint, g
+
+from basic_api_tools.basic_decorators import catch_errors, credentials_required, required_structure
+from . import config
 from . import copy_maker as copy_maker_module
+from . import exceptions
+from . import google_services
+from . import google_services_olapi
+from . import offer as offer_module
 
 copy_helper_blueprint = Blueprint('copy_helper_blueprint', __name__)
 
 
 @copy_helper_blueprint.route("/copy/make", methods=['POST'])
-# @catch_errors
+@catch_errors
 @credentials_required
 @required_structure(['copy', 'domainInfo'])
 def make_copy():
