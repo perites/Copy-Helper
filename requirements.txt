@@ -1,7 +1,4 @@
-python-docx
-google-auth
-google-auth-oauthlib
-google-auth-httplib2
-google-api-python-client
 requests
-pillow
+flask
+-r google_auth_api/google-auth-requirements.txt
+-r copy_helper_api/copy-helper-requirements.txt

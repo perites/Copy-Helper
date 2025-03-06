@@ -1,5 +1,3 @@
-/SystemData/
-/Settings/
 /main-log.log
-/GoogleServicesServer/server_secrets.py
-/GoogleServicesServer/OAuth_Client.json
+/google_auth_api/config.py
+/google_auth_api/OAuth_Client.json

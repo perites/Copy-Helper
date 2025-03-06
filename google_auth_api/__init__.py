@@ -6,7 +6,6 @@ import urllib.parse
 import google.auth.transport.requests
 import google.auth.transport.requests
 import google.oauth2.credentials
-import google.oauth2.credentials
 import google_auth_oauthlib.flow
 from flask import redirect, url_for, request, Blueprint
 
@@ -105,7 +104,7 @@ def validate():
                 return {
                     'message': 'Credentials not valid and can`t can not be refreshed because refresh_token is missing'}, 401
 
-        return {'credentials': str(user_credentials.to_json())}, 200
+        return {'credentials': json.loads(user_credentials.to_json())}, 200
 
     except Exception as e:
         return {
