@@ -24,7 +24,10 @@ redis_db = redis.Redis(host=config.DATABASE_CREDENTIALS['host'],
 
 
 def get_credentials(user_token):
-    return redis_db.get(user_token).decode('utf-8')
+    credentials = redis_db.get(user_token)
+    if credentials:
+        credentials = credentials.decode('utf-8')
+    return credentials
 
 
 def save_credentials(user_token, user_credentials):

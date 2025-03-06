@@ -3,10 +3,6 @@
 import logging
 import os
 import sys
-from flask import Flask
-
-import copy_helper_api
-import google_auth_api
 
 logging.basicConfig(
     format='%(asctime)s [LOGGER:%(name)s] [%(levelname)s] : %(message)s',
@@ -17,6 +13,10 @@ logging.basicConfig(
         logging.FileHandler('main-log.log', mode='a', encoding='utf-8', )
     ]
 )
+from flask import Flask
+
+import copy_helper_api
+import google_auth_api
 
 logging.getLogger('googleapiclient').setLevel(logging.WARNING)
 logging.getLogger('PIL').setLevel(logging.WARNING)

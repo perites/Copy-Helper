@@ -1,13 +1,11 @@
 import dataclasses
+import json
 import logging
 import time
-
+import redis
 import requests
-
-from . import google_services
-from . import paths
-from . import settings
-from . import tools
+from . import config
+from copy_helper_api import google_services, settings, tools
 
 MAX_CACHE_DURATION_SECONDS = 60 * 60 * 6
 
@@ -15,51 +13,46 @@ ALLOWED_STATUSES = ['Live', 'Restricted']
 
 
 class OffersCache:
+    redis_db = redis.Redis(host=config.DATABASE_CREDENTIALS['host'],
+                           password=config.DATABASE_CREDENTIALS['password'], port=config.DATABASE_CREDENTIALS['port'],
+                           ssl=True)
 
-    @staticmethod
-    def get_cache():
+    @classmethod
+    def get_cached_offer(cls, offer_name):
         logging.debug('Getting all offers info cache')
-        offers_info_cache = tools.read_json_file(paths.PATH_TO_FILE_OFFERS_CACHE)
-
-        return offers_info_cache
-
-    @staticmethod
-    def set_cache(new_offers_info_cache):
-        logging.debug('Setting new offers info cache')
-        tools.write_json_file(paths.PATH_TO_FILE_OFFERS_CACHE, new_offers_info_cache)
+        cached_offer_info = cls.redis_db.get(offer_name)
+        if cached_offer_info:
+            cached_offer_info = json.loads(cached_offer_info.decode('utf-8'))
+        return cached_offer_info
 
     @classmethod
     def set_offer_cache(cls, offer_info):
-
-        offers_info_cache = cls.get_cache()
-        offers_info_cache[offer_info['name']] = offer_info
-
-        cls.set_cache(offers_info_cache)
+        cls.redis_db.set(offer_info['name'], json.dumps(offer_info))
 
         return offer_info
 
-    @classmethod
-    def clear_cache(cls, option):
-        match option:
-            case 'all':
-                cls.set_cache({})
-                logging.info('All cache successfully cleared')
-            case _:
-                all_cache = cls.get_cache()
-                if not all_cache.get(option):
-                    logging.warning(f'Can`t clear cache of {option} as it is NOT found in cache')
-                    return
-
-                del all_cache[option]
-                cls.set_cache(all_cache)
-                logging.info(f'Cache for offer {option} cleared')
+    # @classmethod
+    # def clear_cache(cls, option):
+    #     match option:
+    #         case 'all':
+    #             cls.set_cache({})
+    #             logging.info('All cache successfully cleared')
+    #         case _:
+    #             all_cache = cls.get_cache()
+    #             if not all_cache.get(option):
+    #                 logging.warning(f'Can`t clear cache of {option} as it is NOT found in cache')
+    #                 return
+    #
+    #             del all_cache[option]
+    #             cls.set_cache(all_cache)
+    #             logging.info(f'Cache for offer {option} cleared')
 
 
 class OfferGoogleDriveHelper:
 
     @staticmethod
-    def get_copy_files(lift_folder):
-        lift_folder_files = google_services.GoogleDrive.get_files_from_folder(lift_folder['id'])
+    def get_copy_files(lift_folder_id):
+        lift_folder_files = google_services.GoogleDrive.get_files_from_folder(lift_folder_id)
 
         lift_file = None
         mjml_found = False
@@ -86,6 +79,13 @@ class OfferGoogleDriveHelper:
                 break
 
         return lift_file, sl_file
+
+    @staticmethod
+    def get_lift_folder(google_drive_folder_id, lift_number):
+        folder_info = google_services.GoogleDrive.get_folder_by_name(f'Lift {lift_number}', google_drive_folder_id,
+                                                                     strict=True)
+
+        return folder_info
 
     @staticmethod
     def get_offer_general_folder(offer_name):
@@ -128,7 +128,7 @@ class OfferInfoFinder:
         self.name = offer_name
 
     def find_offer_info(self):
-        offer_cached_info = OffersCache.get_cache().get(self.name)
+        offer_cached_info = OffersCache.get_cached_offer(self.name)
 
         if not offer_cached_info:
             logging.debug(f'Offer {self.name} was not found in cache')
@@ -148,7 +148,7 @@ class OfferInfoFinder:
 
     def complain(self, text):
         logging.warning(f'Something wrong with offer {self.name}. Details : {text}')
-        with open(paths.PATH_TO_FOLDER_SYSTEM_DATA + 'wrong_offers.txt', 'a', encoding='utf-8') as file:
+        with open(config.PATH_TO_FOLDER_SYSTEM_DATA + 'wrong_offers.txt', 'a', encoding='utf-8') as file:
             file.write(text + '\n')
 
     def _get_new_offer_info(self):

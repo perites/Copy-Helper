@@ -1,7 +1,7 @@
 import logging
 import re
 
-from . import settings
+from copy_helper_api import settings
 
 
 class StylesHelper:

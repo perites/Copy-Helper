@@ -8,37 +8,78 @@ import traceback
 from . import google_services_olapi
 from . import exceptions
 import google.oauth2.credentials
+from . import offer as offer_module
+from . import google_services
+from . import copy_maker as copy_maker_module
 
 copy_helper_blueprint = Blueprint('copy_helper_blueprint', __name__)
 
 
-def get_google_drive_service():
-    return google_services_olapi.GoogleDrive(g.credentials)
-
-
-@copy_helper_blueprint.route("/copy/files", methods=['GET'])  # {copy: BTUA7TS2 content:bool} credentials requared
-@catch_errors
+@copy_helper_blueprint.route("/copy/make", methods=['POST'])
+# @catch_errors
 @credentials_required
-@required_structure(['copy', 'content'])
-def get_copy_files():
-    pass
+@required_structure(['copy', 'domainInfo'])
+def make_copy():
+    google_services.GoogleDrive.initialize(g.credentials)
+    google_services.GoogleSheets.initialize(g.credentials)
 
-
-@copy_helper_blueprint.route('/file/content', methods=['GET'])
-@catch_errors
-@credentials_required
-# @required_structure([{'file': ['id', 'mimeType', 'name']}])
-@required_structure([{'file': [{"id": ['terst']}, 'mimeType', 'name']}])
-def file_content():
     request_data = request.json
-    file = request_data['file']
-    google_drive_service = get_google_drive_service()
 
-    file_content = google_drive_service.get_file_content(file)
-    if not file_content:
-        return {'message': f'Could not get file content for file {file['name']} for unknown reason'}, 500
+    domain_info = request_data['domainInfo']
+    str_copy = request_data['copy']
 
-    return {'file_content': file_content}, 200
+    copy_maker = copy_maker_module.CopyMaker(domain_info, str_copy)
+    results = copy_maker.make_copy()
+    logging.info(str(results))
+
+    return {
+        'CopyHTML': copy_maker.copy.lift_file_content,
+        'CopySls': copy_maker.copy.sls,
+        'CopyImagesUrls': copy_maker.copy.images
+    }
+
+#
+# @copy_helper_blueprint.route("/copy/files", methods=['GET'])  # {copy: BTUA7TS2 } credentials requared
+# @catch_errors
+# @credentials_required
+# @required_structure(['offer_name', 'lift_number'])
+# def get_copy_files():
+#     request_data = request.json
+#     offer_name = request_data['offer_name']
+#     lift_number = request_data['lift_number']
+#
+#     output_type = request_data.get('output_type')
+#     match output_type:
+#         case 'content':
+#             pass
+#         case 'files_info':
+#             pass
+#         case _:
+#             pass
+#
+#     offer = offer_module.Offer.find(offer_name)
+#     lift_folder = offer.OfferGoogleDriveHelper.get_lift_folder_id(offer.google_drive_folder_id, lift_number)
+#
+#     lift_file, sl_file = offer.OfferGoogleDriveHelper.get_copy_files(lift_folder['id'])
+#     # content_needed
+#     # content_needed = request_data['content']
+# #
+#
+# @copy_helper_blueprint.route('/file/content', methods=['GET'])
+# @catch_errors
+# @credentials_required
+# # @required_structure([{'file': ['id', 'mimeType', 'name']}])
+# @required_structure([{'file': [{"id": ['terst']}, 'mimeType', 'name']}])
+# def file_content():
+#     request_data = request.json
+#     file = request_data['file']
+#     google_drive_service = get_google_drive_service()
+#
+#     file_content = google_drive_service.get_file_content(file)
+#     if not file_content:
+#         return {'message': f'Could not get file content for file {file['name']} for unknown reason'}, 500
+#
+#     return {'file_content': file_content}, 200
 
 # @google_services_blueprint.route('/google/drive/execute')
 # @credentials_required
@@ -143,33 +184,3 @@ def file_content():
 #     }
 #
 #     return requests.get(url=url, headers=headers)
-
-#
-# @copy_maker_blueprint.route("/copy/make")
-# @only_from_allowed_sources
-# @cred_user_id_required
-# def make_copy():
-#     request_data = request.json
-#
-#     domain_name = request_data['DomainName']
-#
-#     date = request_data['Date']
-#
-#     str_copy = request_data['Copy']
-#
-#     try:
-#         copy_maker = copy_maker_api.copy_maker.CopyMaker(domain_name, str_copy, date)
-#         results = copy_maker.make_copy(set_content_from_local=True)
-#         logging.info(str(results))
-#     except copy_maker_api.copy_maker.CopyMakerException as e:
-#         logging.error(
-#             f'Error while making copy {str_copy} for domain {domain_name} for date {date}. Details : {e}')
-#
-#     except copy_maker_api.offer.OfferException as e:
-#         logging.error(f'Error with offer {e.offer_name}. Details : {e}')
-#
-#     except Exception as e:
-#         logging.error(f'Unknown error while making copy {str_copy}. Details : {e}')
-#         logging.debug(traceback.format_exc())
-#
-#     return 'f'

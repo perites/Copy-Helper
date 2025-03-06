@@ -1,9 +1,9 @@
-import google_services
 import logging
 
-parent_folder_id = '1-WFEkKNjVjaJDNt2XKBeJhpIQUviBVim'  # get from db
 
-priority_products_table_id = '1e40khWM1dKTje_vZi4K4fL-RA8-D6jhp2wmZSXurQH0'  # get from db
+# parent_folder_id = '1-WFEkKNjVjaJDNt2XKBeJhpIQUviBVim'  # get from db
+
+# priority_products_table_id = '1e40khWM1dKTje_vZi4K4fL-RA8-D6jhp2wmZSXurQH0'  # get from db
 
 
 class OfferGoogleDriveHelper(google_services.GoogleDrive):
@@ -39,7 +39,7 @@ class OfferGoogleDriveHelper(google_services.GoogleDrive):
 
         return lift_file, sl_file
 
-    def get_offer_general_folder(self, offer_name):
+    def get_offer_general_folder(self, offer_name, parent_folder_id):
         for partner_folder in self.get_folders_of_folder(parent_folder_id):
 
             partner_folder_id = partner_folder['id']
@@ -63,7 +63,7 @@ class OfferGoogleSheetHelper(google_services.GoogleSheets):
     def __init__(self, credentials):
         super().__init__(credentials)
 
-    def get_priority_offer_coordinates(self, offer_name, pages_to_search):
+    def get_priority_offer_coordinates(self, offer_name, pages_to_search, priority_products_table_id):
         for page in pages_to_search:
             priority_product_index = self.get_table_index_of_value(
                 priority_products_table_id, offer_name, f'{page}!A:A', is_row=False)

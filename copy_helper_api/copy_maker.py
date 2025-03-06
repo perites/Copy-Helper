@@ -1,24 +1,21 @@
 import dataclasses
 import logging
-import os
 import re
 import traceback
 
-from . import google_services
-from . import image_helper
-from . import offer
-from . import settings
-from . import styles_helper
-from . import domain
+from copy_helper_api import google_services, image_helper, styles_helper, settings, domain, offer
 
 
 @dataclasses.dataclass
 class Copy:
     lift_file_content: str = ''
-    sl_file_content: str = ''
+    sls: str = ''
     tracking_link: str = 'LINK_NOT_MAID'
     priority_info: dict[str:str] = dataclasses.field(
         default_factory=lambda: {'text': '', 'url': '', 'html_block': ''}
+    )
+    images: list[str] = dataclasses.field(
+        default_factory=lambda: []
     )
 
 
@@ -28,16 +25,12 @@ class Results:
     is_raw_lift_file_found: bool = True
     is_raw_sl_file_found: bool = False
     is_priority_footer_found: bool = False
-    images_saved: int = 0
-    is_image_block_added: bool = False
     is_antispammed: bool = False
 
     def __str__(self):
         return (f'{self.str_copy} results: copy file {self.to_str(self.is_raw_sl_file_found)} | '
                 f'sl file {self.to_str(self.is_raw_sl_file_found)} | '
                 f'pfooter {self.to_str(self.is_priority_footer_found)} | '
-                f'images saved {self.images_saved} | '
-                f'img block created {self.to_str(self.is_image_block_added)} | '
                 f'antispammed {self.to_str(self.is_antispammed)}')
 
     def to_str(self, value):
@@ -69,9 +62,8 @@ class CopyMakerHelpers:
 
 
 class CopyMaker(CopyMakerHelpers):
-    def __init__(self, domain_name, str_copy, date):
-        self.domain = domain.Domain(domain_name)
-        self.date = date
+    def __init__(self, domain_info, str_copy):
+        self.domain = domain.Domain(domain_info)
 
         default_style_settings = settings.GeneralSettings.default_style_settings
         user_domain_styles_settings = self.domain.settings.styles_settings
@@ -90,14 +82,18 @@ class CopyMaker(CopyMakerHelpers):
 
         logging.info(f'Searching copy files for offer {self.offer.name} and lift {self.lift_number}')
 
-        lift_folder = google_services.GoogleDrive.get_folder_by_name(f'Lift {self.lift_number}',
-                                                                     self.offer.google_drive_folder_id)
+        # lift_folder = google_services.GoogleDrive.get_folder_by_name(f'Lift {self.lift_number}',
+        #                                                              self.offer.google_drive_folder_id)
+
+        lift_folder = offer.OfferGoogleDriveHelper.get_lift_folder(self.offer.google_drive_folder_id,
+                                                                   self.lift_number)
+
         if not lift_folder:
             logging.warning(
                 f'Could not find folder Lift {self.lift_number} in offer {self.offer.name}. Please check if folder exist on google drive')
             lift_file, sl_file = None, None
         else:
-            lift_file, sl_file = offer.OfferGoogleDriveHelper.get_copy_files(lift_folder)
+            lift_file, sl_file = offer.OfferGoogleDriveHelper.get_copy_files(lift_folder['id'])
 
         if lift_file:
             self.copy.lift_file_content = google_services.GoogleDrive.get_file_content(lift_file)
@@ -105,7 +101,9 @@ class CopyMaker(CopyMakerHelpers):
             logging.warning(f'Lift file for {self.offer.name} was not found')
 
         if sl_file:
-            self.copy.sl_file_content = google_services.GoogleDrive.get_file_content(sl_file)
+            sl_file_content = google_services.GoogleDrive.get_file_content(sl_file)
+
+            self.copy.sls = sl_file_content.split('\n')
         else:
             logging.warning(f'Sl file for {self.offer.name} was not found')
 
@@ -151,17 +149,11 @@ class CopyMaker(CopyMakerHelpers):
     def process_images(self):
         """Processing Images"""
 
-        self.copy.lift_file_content, imgs_info = image_helper.ImageHelper.process_images(self.copy.lift_file_content,
-                                                                                         self.str_copy,
-                                                                                         self.styles_helper.image_block,
-                                                                                         self.img_code, self.date)
-
-        if imgs_info == -1:
-            pass
-        elif imgs_info == 0:
-            self.results.is_image_block_added = True
-        else:
-            self.results.images_saved = imgs_info
+        self.copy.lift_file_content, self.copy.images = image_helper.ImageHelper.process_images(
+            self.copy.lift_file_content,
+            self.str_copy,
+            self.styles_helper.image_block,
+            self.img_code)
 
     @CopyMakerHelpers.catch_errors
     def apply_styles(self):
@@ -184,11 +176,6 @@ class CopyMaker(CopyMakerHelpers):
     def make_copy(self, set_content_from_local=False):
 
         self.get_copy_files_content()
-
-        if self.copy.lift_file_content:
-            self.results.is_raw_lift_file_found = True
-        if self.copy.sl_file_content:
-            self.results.is_raw_sl_file_found = True
 
         self.make_tracking_link()
 

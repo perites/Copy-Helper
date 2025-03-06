@@ -4,6 +4,7 @@ from io import BytesIO
 from docx import Document
 
 from googleapiclient.discovery import build
+from . import exceptions
 
 
 def get_service(service_name, credentials):
@@ -72,8 +73,7 @@ class GoogleDrive:
                 content = self.extract_text_from_docx(request.execute())
 
             case _:
-                logging.warning(f'Unknown mime_type {mime_type}, returning None')
-                return
+                raise exceptions.UnsupportedFileType(mime_type)
 
         if not content:
             logging.warning(f'Could not get file content for file {file['name']} ')

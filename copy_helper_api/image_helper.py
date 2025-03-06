@@ -6,7 +6,7 @@ import traceback
 import requests
 from PIL import Image
 
-from . import settings
+from copy_helper_api import settings
 
 
 class ImageHelper:
@@ -59,7 +59,10 @@ class ImageHelper:
         return lift_file_content
 
     @classmethod
-    def process_images(cls, lift_file_content, str_copy, image_block, img_code, date):
+    def process_images(cls, lift_file_content, str_copy, image_block, img_code):
+
+        images = []
+
         src_part_pattern = r'src="[^"]*'
 
         src_list = re.findall(src_part_pattern, lift_file_content)
@@ -67,16 +70,18 @@ class ImageHelper:
             if img_code:
                 logging.info('Copy has img code and doesnt contain images')
                 lift_file_content = cls.add_image_block(lift_file_content, str_copy, image_block)
-                return lift_file_content, 0
+                return lift_file_content, images
             else:
                 logging.debug('No images no image code, doing nothing')
-                return lift_file_content, -1
+                return lift_file_content, images
 
-        if settings.GeneralSettings.save_image_path:
-            logging.info(f'Found {len(src_list)} images, saving...')
-            for index, src_part in enumerate(src_list):
-                img_url = src_part.split('"')[1]
+        logging.info(f'Found {len(src_list)} images, processing...')
+        for index, src_part in enumerate(src_list):
+            img_url = src_part.split('"')[1]
 
-                cls.save_image(f'{str_copy}-image-{index + 1}', img_url, date)
+            if img_url not in images:
+                images.append(img_url)
 
-        return lift_file_content, len(src_list)
+            # cls.save_image(f'{str_copy}-image-{index + 1}', img_url, date)
+
+        return lift_file_content, images

@@ -7,18 +7,22 @@ import google.auth.transport.requests
 import google.auth.transport.requests
 import google.oauth2.credentials
 import google_auth_oauthlib.flow
-from flask import redirect, url_for, request, Blueprint
+from flask import redirect, url_for, request, Blueprint, g
 
 from . import config
 from . import tools
+from .decorators import catch_errors, credentials_from_user_token
 
 google_auth_blueprint = Blueprint('google_auth_blueprint', __name__)
 
 SCOPES = ['openid', 'https://www.googleapis.com/auth/userinfo.email', 'https://www.googleapis.com/auth/drive',
           'https://www.googleapis.com/auth/spreadsheets.readonly']
 
+if not os.getenv('USER_TOKEN_SECRET_KEY'):
+    raise ValueError('No user token secret key provided')
 
-@google_auth_blueprint.route("/login")
+
+@google_auth_blueprint.route('/login', methods=['GET'])
 def login():
     flow = google_auth_oauthlib.flow.Flow.from_client_secrets_file(
         config.CLIENT_SECRETS_FILE_PATH, scopes=SCOPES,
@@ -34,7 +38,7 @@ def login():
     return redirect(auth_url)
 
 
-@google_auth_blueprint.route("/callback")
+@google_auth_blueprint.route('/callback')
 def callback():
     flow = google_auth_oauthlib.flow.Flow.from_client_secrets_file(
         config.CLIENT_SECRETS_FILE_PATH, scopes=SCOPES,
@@ -81,32 +85,8 @@ def callback():
             'credentials': user_credentials.to_json()}, 500
 
 
-@google_auth_blueprint.route('/credentials')
-def validate():
-    try:
-        request_data = request.json
-
-        user_token = request_data.get('user_token')
-        if not user_token:
-            return {'message': 'No user token was found in request json'}, 400
-
-        maybe_credentials = tools.get_credentials(user_token)
-
-        if not maybe_credentials:
-            return {'message': 'No credentials was found for given user token'}, 401
-        user_credentials = google.oauth2.credentials.Credentials.from_authorized_user_info(
-            json.loads(str(maybe_credentials)))
-
-        if not user_credentials.valid:
-            if user_credentials.expired and user_credentials.refresh_token:
-                user_credentials.refresh(google.auth.transport.requests.Request())
-            else:
-                return {
-                    'message': 'Credentials not valid and can`t can not be refreshed because refresh_token is missing'}, 401
-
-        return {'credentials': json.loads(user_credentials.to_json())}, 200
-
-    except Exception as e:
-        return {
-            'message': 'Could not retrieve credentials',
-            'error_details': f'{type(e)} : {str(e)}'}, 500
+@google_auth_blueprint.route('/credentials', methods=['GET'])
+# @catch_errors
+@credentials_from_user_token
+def credentials():
+    return {'credentials': json.loads(g.user_credentials.to_json())}, 200

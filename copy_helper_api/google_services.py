@@ -8,12 +8,13 @@ from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 
-from . import paths
+# from copy_helper_api import paths
+from flask import g
 
 
 class ServicesHelper:
     @classmethod
-    def get_service(cls, service_name):
+    def get_service(cls, service_name, credentials):
         match service_name:
             case "drive":
                 version = "v3"
@@ -24,41 +25,45 @@ class ServicesHelper:
             case _:
                 return
 
-        service = build(service_name, version, credentials=cls.get_credentials(), cache_discovery=False)
+        service = build(service_name, version, credentials=credentials, cache_discovery=False)
         return service
 
-    @staticmethod
-    def get_credentials():
-        creds = None
-
-        scopes = ['https://www.googleapis.com/auth/drive', 'https://www.googleapis.com/auth/spreadsheets.readonly']
-
-        path_to_credentials = paths.PATH_TO_FOLDER_SYSTEM_DATA + 'services_token.json'
-
-        if os.path.exists(path_to_credentials):
-            creds = Credentials.from_authorized_user_file(path_to_credentials, scopes)
-
-        if creds:
-            if creds.valid:
-                return creds
-
-            elif creds.expired and creds.refresh_token:
-                creds.refresh(Request())
-                with open(path_to_credentials, 'w', encoding='utf-8') as file:
-                    file.write(creds.to_json())
-                return creds
-
-        flow = InstalledAppFlow.from_client_secrets_file(paths.PATH_TO_FILE_OAUTH, scopes)
-        creds = flow.run_local_server(port=0)
-
-        with open(path_to_credentials, 'w', encoding='utf-8') as file:
-            file.write(creds.to_json())
-
-        return creds
+    # @staticmethod
+    # def get_credentials():
+    #     creds = None
+    #
+    #     scopes = ['https://www.googleapis.com/auth/drive', 'https://www.googleapis.com/auth/spreadsheets.readonly']
+    #
+    #     path_to_credentials = paths.PATH_TO_FOLDER_SYSTEM_DATA + 'services_token.json'
+    #
+    #     if os.path.exists(path_to_credentials):
+    #         creds = Credentials.from_authorized_user_file(path_to_credentials, scopes)
+    #
+    #     if creds:
+    #         if creds.valid:
+    #             return creds
+    #
+    #         elif creds.expired and creds.refresh_token:
+    #             creds.refresh(Request())
+    #             with open(path_to_credentials, 'w', encoding='utf-8') as file:
+    #                 file.write(creds.to_json())
+    #             return creds
+    #
+    #     flow = InstalledAppFlow.from_client_secrets_file(paths.PATH_TO_FILE_OAUTH, scopes)
+    #     creds = flow.run_local_server(port=0)
+    #
+    #     with open(path_to_credentials, 'w', encoding='utf-8') as file:
+    #         file.write(creds.to_json())
+    #
+    #     return creds
 
 
 class GoogleDrive:
-    drive_service = ServicesHelper.get_service('drive')
+    drive_service = None
+
+    @classmethod
+    def initialize(cls, credentials):
+        cls.drive_service = ServicesHelper.get_service('drive', credentials)
 
     @classmethod
     def execute_query(cls, query, fields='files(id, name)'):
@@ -130,8 +135,12 @@ class GoogleDrive:
 
 
 class GoogleSheets:
-    sheet_service = ServicesHelper.get_service('sheets')
+    sheet_service = None
     cache = {}
+
+    @classmethod
+    def initialize(cls, credentials):
+        cls.sheet_service = ServicesHelper.get_service('sheets', credentials)
 
     @classmethod
     def get_new_data_from_range(cls, spreadsheet_id, range):

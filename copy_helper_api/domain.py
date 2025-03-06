@@ -1,10 +1,7 @@
 import dataclasses
 import logging
 
-from . import google_services
-from . import paths
-from . import settings
-from . import tools
+from copy_helper_api import google_services, settings, tools
 
 
 @dataclasses.dataclass
@@ -14,6 +11,7 @@ class DomainSettings:
     priority_unsub_link_info: dict
     styles_settings: dict
     antispam: bool
+    template: str
 
     @classmethod
     def create_from_dict(cls, domain_info):
@@ -22,7 +20,9 @@ class DomainSettings:
             tracking_link_info=domain_info['TrackingLinkInfo'],
             priority_unsub_link_info=domain_info['CustomPriorityUnsubLinkInfo'],
             styles_settings=domain_info['StylesSettings'],
-            antispam=domain_info['AntiSpam']
+            antispam=domain_info['AntiSpam'],
+            template=domain_info['template']
+
         )
 
 
@@ -56,25 +56,25 @@ class DomainGoogleSheetsHelper:
 
 
 class Domain:
-    def __init__(self, domain_name):
-        self.name = domain_name
-        self.settings = DomainSettings.create_from_dict(self.get_file_data('settings'))
+    def __init__(self, domain_info):
+        self.name = domain_info['name']
+        self.settings = DomainSettings.create_from_dict(domain_info)
 
-    def get_file_data(self, file_name):
-        path_to_domain_settings_directory = paths.PATH_TO_FOLDER_DOMAINS_SETTINGS + self.name
-        match file_name:
-            case 'settings':
-                return tools.read_json_file(f'{path_to_domain_settings_directory}/settings.json')
-
-            case 'template':
-                with open(f'{path_to_domain_settings_directory}/template.html', 'r', encoding='utf-8') as file:
-                    return file.read()
+    # def get_file_data(self, file_name):
+    #     path_to_domain_settings_directory = paths.PATH_TO_FOLDER_DOMAINS_SETTINGS + self.name
+    #     match file_name:
+    #         case 'settings':
+    #             return tools.read_json_file(f'{path_to_domain_settings_directory}/settings.json')
+    #
+    #         case 'template':
+    #             with open(f'{path_to_domain_settings_directory}/template.html', 'r', encoding='utf-8') as file:
+    #                 return file.read()
 
     def get_copies(self, broadcast_date):
         return DomainGoogleSheetsHelper.get_copies(self.name, self.settings.page, broadcast_date)
 
     def add_template(self, html_copy, priority_block, add_after_priority_block):
-        template = self.get_file_data('template')
+        template = self.settings.template
 
         if not template:
             return html_copy + "<br><br><br><br><br>" + priority_block
