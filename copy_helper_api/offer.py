@@ -2,10 +2,13 @@ import dataclasses
 import json
 import logging
 import time
+
 import redis
 import requests
+from flask import g
+
+from copy_helper_api import google_services
 from . import config
-from copy_helper_api import google_services, settings, tools
 
 MAX_CACHE_DURATION_SECONDS = 60 * 60 * 6
 
@@ -90,7 +93,7 @@ class OfferGoogleDriveHelper:
     @staticmethod
     def get_offer_general_folder(offer_name):
         for partner_folder in google_services.GoogleDrive.get_folders_of_folder(
-                settings.GeneralSettings.parent_folder_id):
+                g.user_settings.parent_folder_id):
 
             partner_folder_id = partner_folder['id']
             offer_general_folder = google_services.GoogleDrive.get_folder_by_name(offer_name, partner_folder_id, False)
@@ -115,7 +118,7 @@ class OfferGoogleSheetHelper:
     def get_priority_offer_coordinates(offer_name, pages_to_search):
         for page in pages_to_search:
             priority_product_index = google_services.GoogleSheets.get_table_index_of_value(
-                settings.GeneralSettings.priority_products_table_id, offer_name, f'{page}!A:A', is_row=False)
+                g.user_settings.priority_products_table_id, offer_name, f'{page}!A:A', is_row=False)
 
             if priority_product_index:
                 return priority_product_index, page
@@ -163,7 +166,7 @@ class OfferInfoFinder:
 
         offers_info_endpoint = 'https://prior-shea-inri-a582c73b.koyeb.app/monday/product/'
         offer_info_request = requests.get(
-            offers_info_endpoint + self.name + f'?requester=copy-helper-{settings.GeneralSettings.machine_id}')
+            offers_info_endpoint + self.name + f'?requester=copy-helper')
 
         if not offer_info_request.content:
             logging.debug(f'Offer {self.name} was not found at backend')
@@ -263,7 +266,7 @@ class Offer:
             self.update_priority(False)
             return '', ''
 
-        priority_products_table_id = settings.GeneralSettings.priority_products_table_id
+        priority_products_table_id = g.user_settings.priority_products_table_id
 
         priority_product_index += 1
 

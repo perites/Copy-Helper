@@ -3,7 +3,9 @@ import logging
 import re
 import traceback
 
-from copy_helper_api import google_services, image_helper, styles_helper, settings, domain, offer
+from flask import g
+
+from copy_helper_api import google_services, image_helper, styles_helper, domain, offer
 
 
 @dataclasses.dataclass
@@ -65,7 +67,7 @@ class CopyMaker(CopyMakerHelpers):
     def __init__(self, domain_info, str_copy):
         self.domain = domain.Domain(domain_info)
 
-        default_style_settings = settings.GeneralSettings.default_style_settings
+        default_style_settings = g.user_settings.default_style_settings
         user_domain_styles_settings = self.domain.settings.styles_settings
         self.styles_helper = styles_helper.StylesHelper({**default_style_settings, **user_domain_styles_settings})
 

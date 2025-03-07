@@ -1,28 +1,31 @@
+# TODO change link creation with tags <<<trakicng id >>> etc 
+
 import logging
 
 from flask import request, Blueprint, g
 
-from basic_api_tools.basic_decorators import catch_errors, credentials_required, required_structure
+from basic_api_tools.basic_decorators import credentials_required, required_structure
 from . import config
 from . import copy_maker as copy_maker_module
 from . import exceptions
 from . import google_services
 from . import google_services_olapi
 from . import offer as offer_module
+from . import settings
 
 copy_helper_blueprint = Blueprint('copy_helper_blueprint', __name__)
 
 
 @copy_helper_blueprint.route("/copy/make", methods=['POST'])
-@catch_errors
+# @catch_errors
 @credentials_required
-@required_structure(['copy', 'domainInfo'])
+@required_structure(['copy', 'domainInfo', 'userSettings'])
 def make_copy():
     google_services.GoogleDrive.initialize(g.credentials)
     google_services.GoogleSheets.initialize(g.credentials)
 
     request_data = request.json
-
+    settings.UserSettings.set_settings(request_data['userSettings'])
     domain_info = request_data['domainInfo']
     str_copy = request_data['copy']
 
