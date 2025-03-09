@@ -4,20 +4,20 @@ import logging
 
 from flask import request, Blueprint, g
 
-from basic_api_tools.basic_decorators import credentials_required, required_structure
+from basic_api_tools.basic_decorators import credentials_required, required_structure, catch_errors
 from . import config
 from . import copy_maker as copy_maker_module
 from . import exceptions
 from . import google_services
-from . import google_services_olapi
 from . import offer as offer_module
 from . import settings
+from .domain import Domain
 
 copy_helper_blueprint = Blueprint('copy_helper_blueprint', __name__)
 
 
 @copy_helper_blueprint.route("/copy/make", methods=['POST'])
-# @catch_errors
+@catch_errors
 @credentials_required
 @required_structure(['copy', 'domainInfo', 'userSettings'])
 def make_copy():
@@ -38,6 +38,21 @@ def make_copy():
         'CopySls': copy_maker.copy.sls,
         'CopyImagesUrls': copy_maker.copy.images
     }
+
+
+@copy_helper_blueprint.route("/domain/copies", methods=['GET'])
+@catch_errors
+@credentials_required
+@required_structure([{'domain': ['name', 'broadcastId', 'broadcastPage']}, 'date'])
+def find_copies():
+    request_data = request.json
+
+    copies_str = Domain.get_copies(request_data['domain']['name'],
+                                   request_data['domain']['broadcastId'],
+                                   request_data['domain']['broadcastPage'],
+                                   request_data['date'])
+
+    return copies_str
 
 #
 # @copy_helper_blueprint.route("/copy/files", methods=['GET'])  # {copy: BTUA7TS2 } credentials requared

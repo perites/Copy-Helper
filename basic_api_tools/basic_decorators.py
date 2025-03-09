@@ -1,5 +1,6 @@
 import builtins
 import functools
+import logging
 
 import google.oauth2.credentials
 from flask import g
@@ -32,9 +33,12 @@ def catch_errors(func):
             return result
 
         except Exception as e:
+            msg = f'Error during processing {func.__name__}. Details : {type(e)} : {str(e)}'
+
+            logging.error(msg)
+
             status_code = e.status_code if hasattr(e, 'status_code') else 500
-            return {'message': f'Error occurred during processing {func.__name__}',
-                    'error_details': f'{type(e)} : {str(e)}'}, status_code
+            return {'message': msg}, status_code
 
     return wrapped_func
 

@@ -6,17 +6,17 @@ class BasicRequestException(Exception):
 
 class CredentialsMissing(BasicRequestException):
     def __init__(self):
-        message = 'Missing credentials in request body'
-        super().__init__(message, 401)
+        self.message = 'Missing credentials in request body or context'
+        super().__init__(self.message, 401)
 
 
 class RequiredFieldMissing(BasicRequestException):
     def __init__(self, field_name, field_where_missing):
-        message = f'Missing required field {field_name} in {field_where_missing}'
-        super().__init__(message)
+        self.message = f'Missing required field {field_name} in {field_where_missing}'
+        super().__init__(self.message)
 
 
 class WrongFieldType(BasicRequestException):
     def __init__(self, value_type, field_name):
-        message = f'Wrong field type, expected dict got {value_type} for field {field_name}'
-        super().__init__(message)
+        self.message = f'Wrong field type, expected dict got {value_type} for field {field_name}'
+        super().__init__(self.message)

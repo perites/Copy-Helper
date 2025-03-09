@@ -43,20 +43,19 @@ def callback():
 
     flow.fetch_token(authorization_response=request.url)
     credentials = flow.credentials
-    credentials_json = credentials.to_json()
+    credentials_dict = json.loads(credentials.to_json())
     try:
         state_param = request.args.get('state', '{}')
-
         custom_data = json.loads(urllib.parse.unquote(state_param))
 
         custom_callback = custom_data.get('custom_callback')
         if not custom_callback:
             return {'message': 'Successful login to copy helper google service',
-                    'credentials': credentials_json}, 200
+                    'credentials': credentials_dict}, 200
 
         try:
             json_data = json.dumps({
-                'credentials': credentials_json
+                'credentials': credentials_dict
             })
             redirect_url = custom_callback + f'?data={urllib.parse.quote(json_data)}'
             return redirect(redirect_url)
@@ -65,13 +64,13 @@ def callback():
             return {
                 'message': 'Successful login to google service, but could not redirect to specified callback url.',
                 'error_details': f'{type(e)} : {str(e)}',
-                'user_token': credentials_json}, 500
+                'user_token': credentials_dict}, 500
 
     except Exception as e:
         return {
             'message': 'Successful login to copy helper google service, but could not proceed.',
             'error_details': f'{type(e)} : {str(e)}',
-            'credentials': credentials_json
+            'credentials': credentials_dict
         }, 500
 
 
