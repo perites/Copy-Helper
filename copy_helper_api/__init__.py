@@ -5,7 +5,7 @@ import logging
 from flask import request, Blueprint, g
 
 from basic_api_tools.basic_decorators import credentials_required, required_structure, catch_errors
-from . import config
+
 from . import copy_maker as copy_maker_module
 from . import exceptions
 from . import google_services
