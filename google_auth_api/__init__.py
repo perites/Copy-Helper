@@ -8,7 +8,7 @@ import google_auth_oauthlib.flow
 from flask import redirect, url_for, request, Blueprint, g
 
 from basic_api_tools.basic_decorators import catch_errors, credentials_required
-from . import config
+
 
 google_auth_blueprint = Blueprint('google_auth_blueprint', __name__)
 
@@ -37,7 +37,7 @@ def login():
 @catch_errors
 def callback():
     flow = google_auth_oauthlib.flow.Flow.from_client_secrets_file(
-        config.CLIENT_SECRETS_FILE_PATH, scopes=SCOPES,
+        os.getenv('CLIENT_SECRETS_FILE_PATH'), scopes=SCOPES,
         redirect_uri=url_for('.callback', _external=True)
     )
 
