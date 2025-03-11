@@ -16,8 +16,9 @@ ALLOWED_STATUSES = ['Live', 'Restricted']
 
 
 class OffersCache:
-    redis_db = redis.Redis(host=config.DATABASE_CREDENTIALS['host'],
-                           password=config.DATABASE_CREDENTIALS['password'], port=config.DATABASE_CREDENTIALS['port'],
+    DATABASE_CREDENTIALS = json.loads(os.getenv('DATABASE_CREDENTIALS'))
+    redis_db = redis.Redis(host=DATABASE_CREDENTIALS['host'],
+                           password=DATABASE_CREDENTIALS['password'], port=DATABASE_CREDENTIALS['port'],
                            ssl=True)
 
     @classmethod
