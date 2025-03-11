@@ -121,7 +121,7 @@ class GoogleDrive:
                 return
 
         if not content:
-            logging.warning(f'Could not get file content for file {file['name']} ')
+            logging.warning(f'Could not get file content for file {file["name"]} ')
             return ''
 
         return content
