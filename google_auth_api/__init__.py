@@ -20,7 +20,7 @@ SCOPES = ['openid', 'https://www.googleapis.com/auth/userinfo.email', 'https://w
 @catch_errors
 def login():
     flow = google_auth_oauthlib.flow.Flow.from_client_secrets_file(
-        config.CLIENT_SECRETS_FILE_PATH, scopes=SCOPES,
+        os.getenv('CLIENT_SECRETS_FILE_PATH'), scopes=SCOPES,
         redirect_uri=url_for('.callback', _external=True)
     )
     custom_callback = request.args.get('callback', '')
