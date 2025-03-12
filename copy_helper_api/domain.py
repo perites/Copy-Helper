@@ -120,12 +120,12 @@ class Domain:
             case 'VolumeGreen':
                 tracking_link = tracking_link_info['Start'] + offer.tracking_id('volume_green') + \
                                 tracking_link_info[
-                                    'End'] + f'{offer.tracking_id('img_it')}_{lift_number}{img_code}'
+                                    'End'] + f'{offer.tracking_id("img_it")}_{lift_number}{img_code}'
 
             case 'CM TM':
                 tracking_link = tracking_link_info['Start'] + offer.tracking_id('cm_tm') + \
                                 tracking_link_info[
-                                    'End'] + f'{offer.tracking_id('cm_tm')}_{lift_number}{img_code}'
+                                    'End'] + f'{offer.tracking_id("cm_tm")}_{lift_number}{img_code}'
             case _:
                 logging.warning(f"Got unsupported link type {tracking_link_info['Type']}")
                 tracking_link = tracking_link_info['Start'] + "UNSUPPORTED_TYPE" + tracking_link_info[
