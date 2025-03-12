@@ -56,9 +56,9 @@ class DomainSettings:
 
 
 class Domain:
-    # def __init__(self, domain_info):
-    #     self.name = domain_info['name']
-    #     self.settings = DomainSettings.create_from_dict(domain_info)
+    def __init__(self, domain_info):
+        self.name = domain_info['name']
+        self.settings = DomainSettings.create_from_dict(domain_info)
 
     # def get_file_data(self, file_name):
     #     path_to_domain_settings_directory = paths.PATH_TO_FOLDER_DOMAINS_SETTINGS + self.name

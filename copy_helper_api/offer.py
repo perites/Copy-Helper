@@ -1,6 +1,7 @@
 import dataclasses
 import json
 import logging
+import os
 import time
 
 import redis
@@ -8,7 +9,6 @@ import requests
 from flask import g
 
 from copy_helper_api import google_services
-from . import config
 
 MAX_CACHE_DURATION_SECONDS = 60 * 60 * 6
 
@@ -152,7 +152,7 @@ class OfferInfoFinder:
 
     def complain(self, text):
         logging.warning(f'Something wrong with offer {self.name}. Details : {text}')
-        with open(config.PATH_TO_FOLDER_SYSTEM_DATA + 'wrong_offers.txt', 'a', encoding='utf-8') as file:
+        with open('wrong_offers.txt', 'a', encoding='utf-8') as file:
             file.write(text + '\n')
 
     def _get_new_offer_info(self):

@@ -1,4 +1,5 @@
 import json
+import os
 import urllib.parse
 
 import google.auth.transport.requests
@@ -9,7 +10,6 @@ from flask import redirect, url_for, request, Blueprint, g
 
 from basic_api_tools.basic_decorators import catch_errors, credentials_required
 
-
 google_auth_blueprint = Blueprint('google_auth_blueprint', __name__)
 
 SCOPES = ['openid', 'https://www.googleapis.com/auth/userinfo.email', 'https://www.googleapis.com/auth/drive',
@@ -19,8 +19,8 @@ SCOPES = ['openid', 'https://www.googleapis.com/auth/userinfo.email', 'https://w
 @google_auth_blueprint.route('/login', methods=['GET'])
 @catch_errors
 def login():
-    flow = google_auth_oauthlib.flow.Flow.from_client_secrets_file(
-        os.getenv('CLIENT_SECRETS_FILE_PATH'), scopes=SCOPES,
+    flow = google_auth_oauthlib.flow.Flow.from_client_config(
+        json.loads(os.getenv('CLIENT_SECRETS')), scopes=SCOPES,
         redirect_uri=url_for('.callback', _external=True)
     )
     custom_callback = request.args.get('callback', '')
@@ -36,8 +36,8 @@ def login():
 @google_auth_blueprint.route('/callback')
 @catch_errors
 def callback():
-    flow = google_auth_oauthlib.flow.Flow.from_client_secrets_file(
-        os.getenv('CLIENT_SECRETS_FILE_PATH'), scopes=SCOPES,
+    flow = google_auth_oauthlib.flow.Flow.from_client_config(
+        json.loads(os.getenv('CLIENT_SECRETS')), scopes=SCOPES,
         redirect_uri=url_for('.callback', _external=True)
     )
 
