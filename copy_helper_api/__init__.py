@@ -33,9 +33,9 @@ def make_copy():
     logging.info(str(results))
 
     return {
-        'CopyHTML': copy_maker.copy.lift_file_content,
-        'CopySls': copy_maker.copy.sls,
-        'CopyImagesUrls': copy_maker.copy.images
+        'copyHTML': copy_maker.copy.lift_file_content,
+        'copySls': copy_maker.copy.sls,
+        'copyImagesUrls': copy_maker.copy.images
     }
 
 
