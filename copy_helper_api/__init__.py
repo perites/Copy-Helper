@@ -4,8 +4,7 @@ import logging
 
 from flask import request, Blueprint, g
 
-from basic_api_tools.basic_decorators import credentials_required, required_structure, catch_errors
-
+from basic_api_tools.basic_decorators import credentials_required, required_structure
 from . import copy_maker as copy_maker_module
 from . import exceptions
 from . import google_services
@@ -17,7 +16,7 @@ copy_helper_blueprint = Blueprint('copy_helper_blueprint', __name__)
 
 
 @copy_helper_blueprint.route("/copy/make", methods=['POST'])
-@catch_errors
+# @catch_errors
 @credentials_required
 @required_structure(['copy', 'domainInfo', 'userSettings'])
 def make_copy():
@@ -41,7 +40,7 @@ def make_copy():
 
 
 @copy_helper_blueprint.route("/domain/copies", methods=['GET'])
-@catch_errors
+# @catch_errors
 @credentials_required
 @required_structure([{'domain': ['name', 'broadcastId', 'broadcastPage']}, 'date'])
 def find_copies():

@@ -6,14 +6,14 @@ from copy_helper_api import settings
 
 class StylesHelper:
     def __init__(self, styles_settings):
-        self.priority_footer_url_template = styles_settings['PriorityFooterUrlTemplate']
-        self.links_color = styles_settings['LinksColor']
-        self.font_family = styles_settings['FontFamily']
-        self.font_size = styles_settings['FontSize']
-        self.side_padding = styles_settings['SidePadding']
-        self.upper_down_padding = styles_settings['UpperDownPadding']
-        self.add_after_priority_block = styles_settings['AddAfterPriorityBlock']
-        self.image_block = styles_settings['ImageBlock']
+        self.priority_footer_url_template = styles_settings['priorityFooterUrlTemplate']
+        self.links_color = styles_settings['linksColor']
+        self.font_family = styles_settings['fontFamily']
+        self.font_size = styles_settings['fontSize']
+        self.side_padding = styles_settings['sidePadding']
+        self.upper_down_padding = styles_settings['upperDownPadding']
+        self.add_after_priority_block = styles_settings['addAfterPriorityBlock']
+        self.image_block = styles_settings['imageBlock']
 
     def make_priority_footer_html(self, footer_text, url):
         footer_link_keywords = [
