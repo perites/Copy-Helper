@@ -111,23 +111,23 @@ class Domain:
         logging.debug(f'Making tracking link for domain {self.name} copy {str_copy}')
         tracking_link_info = self.settings.tracking_link_info
 
-        match tracking_link_info['Type']:
+        match tracking_link_info['type']:
             case "RT TM":
-                tracking_link = tracking_link_info['Start'] + offer.tracking_id('rt_tm') + \
+                tracking_link = tracking_link_info['start'] + offer.tracking_id('rt_tm') + \
                                 tracking_link_info[
-                                    'End'] + str_copy
+                                    'end'] + str_copy
 
             case 'VolumeGreen':
-                tracking_link = tracking_link_info['Start'] + offer.tracking_id('volume_green') + \
+                tracking_link = tracking_link_info['start'] + offer.tracking_id('volume_green') + \
                                 tracking_link_info[
-                                    'End'] + f'{offer.tracking_id("img_it")}_{lift_number}{img_code}'
+                                    'end'] + f'{offer.tracking_id("img_it")}_{lift_number}{img_code}'
 
             case 'CM TM':
-                tracking_link = tracking_link_info['Start'] + offer.tracking_id('cm_tm') + \
+                tracking_link = tracking_link_info['start'] + offer.tracking_id('cm_tm') + \
                                 tracking_link_info[
-                                    'End'] + f'{offer.tracking_id("cm_tm")}_{lift_number}{img_code}'
+                                    'end'] + f'{offer.tracking_id("cm_tm")}_{lift_number}{img_code}'
             case _:
-                logging.warning(f"Got unsupported link type {tracking_link_info['Type']}")
+                logging.warning(f"Got unsupported link type {tracking_link_info['type']}")
                 tracking_link = tracking_link_info['Start'] + "UNSUPPORTED_TYPE" + tracking_link_info[
                     'End'] + "UNSUPPORTED_TYPE"
 
