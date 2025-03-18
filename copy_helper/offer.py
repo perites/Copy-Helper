@@ -217,7 +217,7 @@ class OfferInfoFinder:
             self.complain(f'{self.name} - link for google drive missing in Monday')
 
             offer_general_folder = OfferGoogleDriveHelper.get_offer_general_folder(self.name)
-            google_drive_folder_id = OfferGoogleDriveHelper.get_offer_folder_id(self.name, offer_general_folder)
+            google_drive_folder_id = OfferGoogleDriveHelper.get_offer_folder_id(self.name, offer_general_folder['id'])
 
         if not google_drive_folder_id:
             logging.warning(f'Google drive folder id was not found for offer {self.name}')
