@@ -198,6 +198,7 @@ class OfferInfoFinder:
         return processed_offer_info
 
     def _find_offer_google_drive_folder_id(self, raw_google_drive_offer_folder_url):
+        raw_google_drive_offer_folder_url = None
         if raw_google_drive_offer_folder_url:
             logging.debug('Checking if folder in Monday actually for HTML+SL folder')
 
