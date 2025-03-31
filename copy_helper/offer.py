@@ -11,7 +11,7 @@ from . import tools
 
 MAX_CACHE_DURATION_SECONDS = 60 * 60 * 6
 
-ALLOWED_STATUSES = ['Live', 'Restricted']
+ALLOWED_STATUSES = ['Live', 'Restricted', 'Budget Limits']
 
 
 class OffersCache:
