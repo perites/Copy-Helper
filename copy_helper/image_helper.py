@@ -13,7 +13,7 @@ class ImageHelper:
     @classmethod
     def save_image(cls, image_file_name, image_url, date):
         try:
-            save_image_path = settings.GeneralSettings.save_image_path +f'{date}/'
+            save_image_path = settings.GeneralSettings.save_image_path + f'{date}/'
 
             if not os.path.exists(save_image_path):
                 os.makedirs(save_image_path)
@@ -61,7 +61,7 @@ class ImageHelper:
     @classmethod
     def process_images(cls, lift_file_content, str_copy, image_block, img_code, date):
         src_part_pattern = r'src="[^"]*'
-
+        processed_urls = []
         src_list = re.findall(src_part_pattern, lift_file_content)
         if len(src_list) == 0:
             if img_code:
@@ -76,7 +76,10 @@ class ImageHelper:
             logging.info(f'Found {len(src_list)} images, saving...')
             for index, src_part in enumerate(src_list):
                 img_url = src_part.split('"')[1]
+                if img_url in processed_urls:
+                    continue
 
                 cls.save_image(f'{str_copy}-image-{index + 1}', img_url, date)
+                processed_urls.append(img_url)
 
         return lift_file_content, len(src_list)
