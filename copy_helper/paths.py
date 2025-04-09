@@ -20,8 +20,9 @@ def create_general_settings():
         "PriorityProductsTableId": "1e40khWM1dKTje_vZi4K4fL-RA8-D6jhp2wmZSXurQH0",
         "DirectoryToStoreResults": "",
         "ResultDirectoryType": "",
-        "InformationLevel": "All",
         "AutoImagesSavePath": "",
+        "Niche": "Finance",
+        "InformationLevel": "All",
         "DomainsShortNames": {
             "DOMAIN_ABR": "DomainNameAsInBroadcast"
         },

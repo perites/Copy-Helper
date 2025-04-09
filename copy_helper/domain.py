@@ -91,6 +91,9 @@ class Domain:
         tracking_link_info = self.settings.tracking_link_info
 
         match tracking_link_info['Type']:
+            case "BizzOpp":
+                tracking_link = tracking_link_info['Start'] + offer.name + tracking_link_info['End'] + str_copy
+
             case "RT TM":
                 tracking_link = tracking_link_info['Start'] + offer.tracking_id('rt_tm') + \
                                 tracking_link_info[

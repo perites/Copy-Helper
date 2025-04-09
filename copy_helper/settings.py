@@ -21,6 +21,7 @@ class GeneralSettings:
     save_image_path: str
     logging_level: str
     result_directory_type: str
+    niche: str
 
     @classmethod
     def set_settings(cls):
@@ -39,6 +40,7 @@ class GeneralSettings:
         cls.machine_id = cls.get_unique_machine_id()
         cls.save_image_path = settings_dict['AutoImagesSavePath']
         cls.logging_level = settings_dict['InformationLevel']
+        cls.niche = settings_dict['Niche']
 
     @staticmethod
     def get_unique_machine_id():

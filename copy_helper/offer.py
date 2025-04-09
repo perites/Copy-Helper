@@ -160,16 +160,24 @@ class OfferInfoFinder:
 
     def _get_raw_offer_info(self):
         logging.info(f'Getting raw info for {self.name} from backend')
+        raw_offer_info = None
+        if settings.GeneralSettings.niche != "BizzOpp":
+            offers_info_endpoint = 'https://prior-shea-inri-a582c73b.koyeb.app/monday/product/'
+            offer_info_request = requests.get(
+                offers_info_endpoint + self.name + f'?requester=copy-helper-{settings.GeneralSettings.machine_id}')
 
-        offers_info_endpoint = 'https://prior-shea-inri-a582c73b.koyeb.app/monday/product/'
-        offer_info_request = requests.get(
-            offers_info_endpoint + self.name + f'?requester=copy-helper-{settings.GeneralSettings.machine_id}')
+            if not offer_info_request.content:
+                logging.debug(f'Offer {self.name} was not found at backend')
+                raise OfferNotFound(self.name)
 
-        if not offer_info_request.content:
-            logging.debug(f'Offer {self.name} was not found at backend')
-            raise OfferNotFound(self.name)
+            raw_offer_info = offer_info_request.json()
 
-        raw_offer_info = offer_info_request.json()
+        elif settings.GeneralSettings.niche == "BizzOpp":
+            mock_response = {"column_values": [{"id": "status7", "text": "Live"},
+                                               {"id": "_____",
+                                                "text": "BizzOpp"}]}
+
+            raw_offer_info = mock_response
 
         return raw_offer_info
 
@@ -200,6 +208,10 @@ class OfferInfoFinder:
     def _find_offer_google_drive_folder_id(self, raw_google_drive_offer_folder_url):
         if raw_google_drive_offer_folder_url:
             logging.debug('Checking if folder in Monday actually for HTML+SL folder')
+
+            if raw_google_drive_offer_folder_url == "BizzOpp":
+                logging.debug('Got a BizzOpp product, starting manual search')
+                return self._find_offer_folder_manually()
 
             raw_google_drive_folder_id = raw_google_drive_offer_folder_url.split('/folders/')[1]
             maybe_google_drive_folder_id = OfferGoogleDriveHelper.get_offer_folder_id(self.name,
