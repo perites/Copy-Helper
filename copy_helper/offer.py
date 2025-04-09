@@ -11,7 +11,7 @@ from . import tools
 
 MAX_CACHE_DURATION_SECONDS = 60 * 60 * 6
 
-ALLOWED_STATUSES = ['Live', 'Restricted']
+ALLOWED_STATUSES = ['Live', 'Restricted', 'Budget Limits']
 
 
 class OffersCache:
@@ -198,6 +198,7 @@ class OfferInfoFinder:
         return processed_offer_info
 
     def _find_offer_google_drive_folder_id(self, raw_google_drive_offer_folder_url):
+        raw_google_drive_offer_folder_url = None
         if raw_google_drive_offer_folder_url:
             logging.debug('Checking if folder in Monday actually for HTML+SL folder')
 
@@ -216,7 +217,7 @@ class OfferInfoFinder:
             self.complain(f'{self.name} - link for google drive missing in Monday')
 
             offer_general_folder = OfferGoogleDriveHelper.get_offer_general_folder(self.name)
-            google_drive_folder_id = OfferGoogleDriveHelper.get_offer_folder_id(self.name, offer_general_folder)
+            google_drive_folder_id = OfferGoogleDriveHelper.get_offer_folder_id(self.name, offer_general_folder['id'])
 
         if not google_drive_folder_id:
             logging.warning(f'Google drive folder id was not found for offer {self.name}')
