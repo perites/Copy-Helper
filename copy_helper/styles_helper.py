@@ -23,6 +23,10 @@ class StylesHelper:
             'here',
         ]
 
+        if not url:
+            priority_block = footer_text.replace('\n', '<br>')
+            return priority_block
+
         for keyword in footer_link_keywords:
             if keyword in footer_text:
                 unsub_footer_url = self.priority_footer_url_template

@@ -276,8 +276,25 @@ class Offer:
     def get_priority_footer_values(self, priority_unsub_link_info):
         logging.debug(f'Searching for footer for offer {self.name}')
 
+        priority_info = {
+            'pages': ['Other PP', 'FIT'],
+            'text_column': 'C',
+            'link_column': 'F',
+            'id_column': None
+        }
+
+        if unsub_link_type := priority_unsub_link_info.get('Type'):
+            match unsub_link_type:
+
+                case "RT TM":
+                    priority_info['pages'] = ['UNSUB ID TT ']
+                    priority_info['id_column'] = 'D'
+
+                case 'VolumeGreen':
+                    priority_info['id_column'] = 'E'
+
         priority_product_index, page = OfferGoogleSheetHelper.get_priority_offer_coordinates(self.name,
-                                                                                             ['Other PP', 'FIT'])
+                                                                                             priority_info['pages'])
 
         if not priority_product_index:
             self.is_priority = False
@@ -289,25 +306,26 @@ class Offer:
         priority_product_index += 1
 
         text_value = google_services.GoogleSheets.get_data_from_range(priority_products_table_id,
-                                                                      f'{page}!C{priority_product_index}')[0][0]
+                                                                      f'{page}!{priority_info['text_column']}{priority_product_index}')[
+            0][0]
 
         unsub_url = google_services.GoogleSheets.get_data_from_range(priority_products_table_id,
-                                                                     f'{page}!F{priority_product_index}')
+                                                                     f'{page}!{priority_info['link_column']}{priority_product_index}')
         if not unsub_url:
             logging.warning('Unsub url not found')
-            unsub_url = 'UNSUB_URL_NOT_FOUND'
+            unsub_url = None
+
+        elif priority_info['id_column']:
+            id = google_services.GoogleSheets.get_data_from_range(priority_products_table_id,
+                                                                  f'{page}!{priority_info['id_column']}{priority_product_index}')
+            if id:
+                unsub_url = priority_unsub_link_info['Start'] + id[0][0] + priority_unsub_link_info['End']
+            else:
+                logging.warning('Custom unsub ID was not found in priority table, using default link')
+                unsub_url = unsub_url[0][0]
+
         else:
             unsub_url = unsub_url[0][0]
-
-        if unsub_link_type := priority_unsub_link_info.get('Type'):
-            match unsub_link_type:
-                case 'VolumeGreen':
-                    id = google_services.GoogleSheets.get_data_from_range(priority_products_table_id,
-                                                                          f'{page}!E{priority_product_index}')
-                    if id:
-                        unsub_url = priority_unsub_link_info['Start'] + id[0][0] + priority_unsub_link_info['End']
-                    else:
-                        logging.warning('VolumeGreen was not found in priority table, using default link')
 
         return text_value, unsub_url
 
