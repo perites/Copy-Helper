@@ -20,7 +20,6 @@ class StylesHelper:
             'edit your e-mail notification preferences or unsubscribe',
             'Privacy Policy',
             'unsubscribe here',
-            'unsubscribe',
             'here',
         ]
 
