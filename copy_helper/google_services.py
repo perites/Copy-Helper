@@ -157,18 +157,23 @@ class GoogleSheets:
         return values
 
     @classmethod
-    def get_table_index_of_value(cls, spreadsheet_id, value, range, is_row=True):
+    def get_table_index_of_value(cls, spreadsheet_id, value, range, is_row=True, strict=True):
         all_values = cls.get_data_from_range(spreadsheet_id, range)
 
         if is_row:
             all_values = all_values[0] if is_row else all_values
             value_index = all_values.index(value)
-
+            # TODO add strict=False support
             return value_index
 
         else:
             for index, table_row in enumerate(all_values):
 
                 data = table_row[0].strip() if table_row else None
-                if data == value:
-                    return index
+
+                if strict:
+                    if data == value:
+                        return index
+                elif data:
+                    if value in data:
+                        return index

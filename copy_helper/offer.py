@@ -2,8 +2,6 @@ import dataclasses
 import logging
 import time
 
-import requests
-
 from . import google_services
 from . import paths
 from . import settings
@@ -115,7 +113,8 @@ class OfferGoogleSheetHelper:
     def get_priority_offer_coordinates(offer_name, pages_to_search):
         for page in pages_to_search:
             priority_product_index = google_services.GoogleSheets.get_table_index_of_value(
-                settings.GeneralSettings.priority_products_table_id, offer_name, f'{page}!A:A', is_row=False)
+                settings.GeneralSettings.priority_products_table_id, offer_name, f'{page}!A:A', is_row=False,
+                strict=False)
 
             if priority_product_index:
                 return priority_product_index, page
@@ -162,15 +161,19 @@ class OfferInfoFinder:
         logging.info(f'Getting raw info for {self.name} from backend')
         raw_offer_info = None
         if settings.GeneralSettings.niche != "BizzOpp":
-            offers_info_endpoint = 'https://prior-shea-inri-a582c73b.koyeb.app/monday/product/'
-            offer_info_request = requests.get(
-                offers_info_endpoint + self.name + f'?requester=copy-helper-{settings.GeneralSettings.machine_id}')
+            # offers_info_endpoint = 'https://prior-shea-inri-a582c73b.koyeb.app/monday/product/'
+            # offer_info_request = requests.get(
+            #     offers_info_endpoint + self.name + f'?requester=copy-helper-{settings.GeneralSettings.machine_id}')
+            #
+            # if not offer_info_request.ok:
+            #     logging.debug(f'Offer {self.name} was not found at backend')
+            #     raise OfferNotFound(self.name)
+            #
+            # raw_offer_info = offer_info_request.json()
 
-            if not offer_info_request.content:
-                logging.debug(f'Offer {self.name} was not found at backend')
-                raise OfferNotFound(self.name)
+            raw_offer_info = tools.get_product_info_from_monday(settings.GeneralSettings.monday_token,
+                                                                settings.GeneralSettings.monday_id, self.name)
 
-            raw_offer_info = offer_info_request.json()
 
         elif settings.GeneralSettings.niche == "BizzOpp":
             mock_response = {"column_values": [{"id": "status7", "text": "Live"},
