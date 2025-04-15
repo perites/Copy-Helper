@@ -8,21 +8,82 @@ from . import tools
 
 
 @dataclasses.dataclass
-class DomainSettings:
-    page: str
-    tracking_link_info: dict
-    priority_unsub_link_info: dict
-    styles_settings: dict
+class StylesSettings:
     antispam: bool
 
+    font_size: str
+    font_family: str
+
+    links_color: str
+
+    side_padding: str
+    upper_down_padding: str
+
+    priority_block: str
+    unsub_priority_link_block: str
+    image_block: str
+
     @classmethod
-    def create_from_dict(cls, domain_info):
+    def create_from_dict(cls, styles_dict):
         return cls(
-            page=domain_info['PageInBroadcast'],
-            tracking_link_info=domain_info['TrackingLinkInfo'],
-            priority_unsub_link_info=domain_info['CustomPriorityUnsubLinkInfo'],
-            styles_settings=domain_info['StylesSettings'],
-            antispam=domain_info['AntiSpam']
+            antispam=styles_dict['antispam'],
+            font_size=styles_dict['fontSize'],
+            font_family=styles_dict['fontFamily'],
+            links_color=styles_dict['linksColor'],
+            side_padding=styles_dict['sidePadding'],
+            upper_down_padding=styles_dict['upperDownPadding'],
+            priority_block=styles_dict['priorityBlock'],
+            unsub_priority_link_block=styles_dict['unsubPriorityLinkBlock'],
+            image_block=styles_dict['imageBlock']
+        )
+
+
+@dataclasses.dataclass
+class DomainSettings:
+    broadcast_id: str
+    broadcast_page: str
+    broadcast_name: str
+
+    monday_id: int
+
+    tracking_link_type: str
+    tracking_link_end_type: str
+    tracking_link_template: str
+
+    priority_products_table_id: str
+    priority_products_pages: list[str]
+    priority_products_text_column: str
+    priority_products_link_column: str
+    priority_products_id_column: None | str
+    priority_products_unsub_link_template: str
+
+    styles: StylesSettings
+
+    template: str
+
+    @classmethod
+    def create_from_dict(cls, domain_info, template):
+        return cls(
+            broadcast_id=domain_info['broadcast']['id'],
+            broadcast_page=domain_info['broadcast']['page'],
+            broadcast_name=domain_info['broadcast']['name'],
+
+            monday_id=domain_info['monday']['id'],
+
+            tracking_link_type=domain_info['trackingLink']['type'],
+            tracking_link_end_type=domain_info['trackingLink']['endType'],
+            tracking_link_template=domain_info['trackingLink']['template'],
+
+            priority_products_table_id=domain_info['priorityProducts']['tableID'],
+            priority_products_pages=domain_info['priorityProducts']['pages'],
+            priority_products_text_column=domain_info['priorityProducts']['textColumn'],
+            priority_products_link_column=domain_info['priorityProducts']['linkColumn'],
+            priority_products_id_column=domain_info['priorityProducts'].get('id_column'),
+            priority_products_unsub_link_template=domain_info['priorityProducts']['unsubLinkTemplate'],
+
+            styles=StylesSettings.create_from_dict(domain_info['styles']),
+
+            template=template
         )
 
 
