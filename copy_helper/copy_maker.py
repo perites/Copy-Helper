@@ -12,7 +12,7 @@ from . import styles_helper
 
 
 @dataclasses.dataclass
-class Copy:
+class CopyInfo:
     lift_file_content: str = ''
     sl_file_content: str = ''
     tracking_link: str = 'LINK_NOT_MAID'
@@ -81,7 +81,7 @@ class CopyMaker(CopyMakerHelpers):
         offer_name, self.lift_number, self.img_code = self.get_info_from_str_copy(self.str_copy)
         self.offer = offer.Offer.find(offer_name)
 
-        self.copy = Copy()
+        self.copy = CopyInfo()
         self.results = Results(self.str_copy)
 
     def set_result_directory(self):
@@ -289,6 +289,122 @@ class CopyMaker(CopyMakerHelpers):
         self.save_copy_files()
 
         return self.results
+
+
+class Copy:
+    def __init__(self, domain, offer, lift_number, img_code):
+        self.domain = domain
+
+        self.offer = offer
+        self.lift_number = lift_number
+        self.img_code = img_code
+        self.str_rep = self.offer.name + self.lift_number + self.img_code
+
+        self.html = ''
+        self.sls = []
+        self.tracking_link = 'LINK_NOT_MAID'
+        self.unsub_link = ''
+        self.unsub_text = ''
+        self.images = []
+
+    @staticmethod
+    def catch_errors(func):
+        def inner(self, *args, **kwargs):
+            try:
+                result = func(self, *args, **kwargs)
+                return result
+            except Exception as e:
+                logging.error(f'Error while {func.__doc__}. Details : {e}')
+                logging.debug(traceback.format_exc())
+
+        return inner
+
+    @catch_errors
+    def get_files_content(self):
+        """Saving Lift and SL files from GoogleDrive"""
+
+        logging.info(f'Searching copy files for offer {self.offer.name} and lift {self.lift_number}')
+
+        lift_folder = google_services.GoogleDrive.get_folder_by_name(f'Lift {self.lift_number}',
+                                                                     self.offer.google_drive_folder_id)
+        if not lift_folder:
+            logging.warning(
+                f'Could not find folder Lift {self.lift_number} in offer {self.offer.name}. Please check if folder exist on google drive')
+            lift_file, sl_file = None, None
+        else:
+            lift_file, sl_file = offer.OfferGoogleDriveHelper.get_copy_files(lift_folder)
+
+        if lift_file:
+            self.html = google_services.GoogleDrive.get_file_content(lift_file)
+        else:
+            logging.warning(f'Lift file for {self.offer.name} was not found')
+
+        if sl_file:
+            raw_sls = google_services.GoogleDrive.get_file_content(sl_file)
+            self.sls = raw_sls.split('\n')
+        else:
+            logging.warning(f'Sl file for {self.offer.name} was not found')
+
+    @catch_errors
+    def make_tracking_link(self):
+        """Making tracking link"""
+
+        logging.debug(f'Making tracking link for copy {self.str_rep} domain {self.domain.broadcast_name}')
+
+        tracking_id = self.offer.tracking_id(self.domain.tracking_link_type)
+
+        match self.domain.tracking_link_end_type:
+            case 'IMG-IT':
+                link_end = self.offer.tracking_id('IMG-IT') + self.lift_number + self.img_code
+            case 'IMG-IT-NUM':
+                link_end = self.offer.tracking_id('IMG-IT')[3:] + self.lift_number + self.img_code
+            case _:
+                link_end = self.str_rep
+
+        tracking_link = self.domain.tracking_link_template
+        tracking_link = tracking_link.replace('[TRACKING_ID]', tracking_id)
+        tracking_link = tracking_link.replace('[END]', link_end)
+
+        self.tracking_link = tracking_link
+
+    @catch_errors
+    def get_priority_info(self):
+        """Searching priority text and url in GoogleSheets"""
+        if self.offer.is_priority:
+            footer_text, unsub_url, unsub_id = self.offer.get_priority_footer_values(
+                self.domain.priority_products_table_id, self.domain.priority_products_pages,
+                self.domain.priority_products_text_column, self.domain.priority_products_link_column,
+                self.domain.priority_products_id_column)
+
+            self.unsub_text = footer_text
+
+            if unsub_id:
+                self.unsub_link = self.domain.priority_products_unsub_link_template.replace('[UNSUB_ID]', unsub_id)
+            else:
+                self.unsub_link = unsub_url
+
+            # if self.copy.priority_info['html_block']:
+            #     self.results.is_priority_footer_found = True
+
+    def make_response(self):
+        return {
+            'copy': {
+                'str_rep': self.str_rep,
+                'html': self.html,
+                'sls': self.sls,
+                'images': self.images,
+                'tracking_link': self.tracking_link,
+                'unsub_link': self.unsub_link
+            },
+        }
+
+    def make(self):
+        self.get_files_content()
+        self.make_tracking_link()
+        self.get_priority_info()
+        return self.make_response()
+        if not self.html:
+            return self.make_response()
 
 
 class CopyMakerException(Exception):

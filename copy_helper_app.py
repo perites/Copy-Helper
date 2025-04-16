@@ -62,6 +62,11 @@ def get_str_copies(domain, date):
 
 
 def main_cycle():
+    domain = copy_helper.domain.Domain.create_from_dict({})
+
+    print(copy_helper.copy_maker.Copy(domain, copy_helper.offer.Offer.find('MPPX'), '7', 'TS2').make())
+    exit()
+
     logging.info('Type what you want to do:')
     logging.info('make-domain (md) | apply-styles | add-domain | clear-cache | exit')
     action = cinput()
@@ -123,7 +128,7 @@ def main_cycle():
             logging.info(f'Finished making domain {domain.name} for date {broadcast_date}')
             for results in copies_results:
                 logging.info(str(results))
-                
+
             logging.info('======================')
 
         case 'apply-styles':

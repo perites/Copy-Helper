@@ -276,61 +276,54 @@ class Offer:
             _raw_offer_info=offer_info
         )
 
-    def get_priority_footer_values(self, priority_unsub_link_info):
+    def get_priority_footer_values(self, tableID, pages, text_column, link_column, id_column):
         logging.debug(f'Searching for footer for offer {self.name}')
 
-        priority_info = {
-            'pages': ['Other PP', 'FIT'],
-            'text_column': 'C',
-            'link_column': 'F',
-            'id_column': None
-        }
+        priority_product_index, priority_product_page = None, None
 
-        if unsub_link_type := priority_unsub_link_info.get('Type'):
-            match unsub_link_type:
+        for page in pages:
+            index = google_services.GoogleSheets.get_table_index_of_value(tableID, self.name,
+                                                                          f'{page}!A:A', is_row=False,
+                                                                          strict=False)
 
-                case "RT TM":
-                    priority_info['pages'] = ['UNSUB ID TT ']
-                    priority_info['id_column'] = 'D'
-
-                case 'VolumeGreen':
-                    priority_info['id_column'] = 'E'
-
-        priority_product_index, page = OfferGoogleSheetHelper.get_priority_offer_coordinates(self.name,
-                                                                                             priority_info['pages'])
+            if priority_product_index:
+                priority_product_index, priority_product_page = index, page
+                break
 
         if not priority_product_index:
             self.is_priority = False
             self.update_priority(False)
-            return '', ''
-
-        priority_products_table_id = settings.GeneralSettings.priority_products_table_id
+            return '', '', ''
 
         priority_product_index += 1
 
-        text_value = google_services.GoogleSheets.get_data_from_range(priority_products_table_id,
-                                                                      f'{page}!{priority_info['text_column']}{priority_product_index}')[
-            0][0]
+        text_value = google_services.GoogleSheets.get_data_from_range(
+            tableID, f'{priority_product_page}!{text_column}{priority_product_index}')[0][0]
 
-        unsub_url = google_services.GoogleSheets.get_data_from_range(priority_products_table_id,
-                                                                     f'{page}!{priority_info['link_column']}{priority_product_index}')
+        if text_value:
+            logging.info(f'Priority footer was found for {self.name}')
+        else:
+            logging.debug(f'Priority footer not found for {self.name}')
+
+        unsub_url = google_services.GoogleSheets.get_data_from_range(
+            tableID, f'{priority_product_page}!{link_column}{priority_product_index}')
+
         if not unsub_url:
             logging.warning('Unsub url not found')
-            unsub_url = None
-
-        elif priority_info['id_column']:
-            id = google_services.GoogleSheets.get_data_from_range(priority_products_table_id,
-                                                                  f'{page}!{priority_info['id_column']}{priority_product_index}')
-            if id:
-                unsub_url = priority_unsub_link_info['Start'] + id[0][0] + priority_unsub_link_info['End']
-            else:
-                logging.warning('Custom unsub ID was not found in priority table, using default link')
-                unsub_url = unsub_url[0][0]
-
         else:
             unsub_url = unsub_url[0][0]
 
-        return text_value, unsub_url
+        unsub_id = None
+        if id_column:
+            unsub_id = google_services.GoogleSheets.get_data_from_range(
+                tableID, f'{priority_product_page}!{id_column}{priority_product_index}')
+
+            if not unsub_id:
+                logging.warning('Unsub ID not found')
+            else:
+                unsub_id = unsub_id[0][0]
+
+        return text_value, unsub_url, unsub_id
 
     def update_offer_cache(self, key, new_value):
         offer_info = self._raw_offer_info
