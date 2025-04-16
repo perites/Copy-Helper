@@ -1,8 +1,6 @@
 import logging
 import re
 
-from . import settings
-
 
 class StylesHelper:
     def __init__(self, styles_settings):
@@ -65,9 +63,33 @@ class StylesHelper:
         return lift_html
 
     @staticmethod
-    def antispam_text(text):
+    def antispam_text(text, custom_replacements):
 
-        replacements = settings.GeneralSettings.anti_spam_replacements
+        replacements = {
+            "A": "А",
+            "E": "Е",
+            "I": "І",
+            "O": "О",
+            "P": "Р",
+            "T": "Т",
+            "H": "Н",
+            "K": "К",
+            "X": "Х",
+            "C": "С",
+            "B": "В",
+            "M": "М",
+            "e": "е",
+            "y": "у",
+            "i": "і",
+            "o": "о",
+            "a": "а",
+            "x": "х",
+            "c": "с",
+            "%": "％",
+            "$": "＄"
+        }
+
+        replacements = {**replacements, **custom_replacements}
 
         new_text = ''
         inside_tag = False

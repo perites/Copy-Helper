@@ -39,7 +39,7 @@ class StylesSettings:
 
 
 @dataclasses.dataclass
-class DomainSettings:
+class Domain:
     broadcast_id: str
     broadcast_page: str
     broadcast_name: str
@@ -62,7 +62,7 @@ class DomainSettings:
     template: str
 
     @classmethod
-    def create_from_dict(cls, domain_info, template):
+    def create_from_dict(cls, domain_info):
         return cls(
             broadcast_id=domain_info['broadcast']['id'],
             broadcast_page=domain_info['broadcast']['page'],
@@ -83,8 +83,34 @@ class DomainSettings:
 
             styles=StylesSettings.create_from_dict(domain_info['styles']),
 
-            template=template
+            template=domain_info['template']
         )
+
+    def get_copies_from_broadcast(self, date):
+
+        domain_index = google_services.GoogleSheets.get_table_index_of_value(self.broadcast_id, self.broadcast_name,
+                                                                             f'{self.broadcast_page}!1:1')
+
+        if not domain_index:
+            logging.warning(f'Could not find domain {self.broadcast_name} in Broadcast')
+            return
+
+        date_index = google_services.GoogleSheets.get_table_index_of_value(self.broadcast_id, date,
+                                                                           f'{self.broadcast_page}!A:A',
+                                                                           False)
+        if not domain_index:
+            logging.warning(f'Could not find date {date} in Broadcast')
+            return
+
+        date_row = date_index + 1
+        copies_range = f'{self.broadcast_page}!{date_row}:{date_row}'
+        copies_for_date = google_services.GoogleSheets.get_data_from_range(self.broadcast_id, copies_range)
+        copies_for_domain = copies_for_date[0][domain_index]
+        if not copies_for_domain:
+            logging.warning(f'Could not find copies in range {copies_range} in Broadcast')
+            return
+
+        return copies_for_domain.strip().split(' ')
 
 
 class DomainGoogleSheetsHelper:
@@ -140,9 +166,9 @@ class Domain:
         if not template:
             return html_copy + "<br><br><br><br><br>" + priority_block
 
-        template = template.replace('<<<-COPY_HERE->>>', html_copy)
+        template = template.replace('[COPY_HERE]', html_copy)
 
-        template = template.replace('<<<-PRIORITY_FOOTER_HERE->>>',
+        template = template.replace('[PRIORITY_FOOTER_HERE]',
                                     priority_block + (add_after_priority_block if priority_block else ""))
 
         return template
