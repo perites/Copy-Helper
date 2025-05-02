@@ -12,20 +12,20 @@ from . import paths
 
 
 class ServicesHelper:
-    @classmethod
-    def get_service(cls, service_name):
-        match service_name:
-            case "drive":
-                version = "v3"
-
-            case "sheets":
-                version = "v4"
-
-            case _:
-                return
-
-        service = build(service_name, version, credentials=cls.get_credentials(), cache_discovery=False)
-        return service
+    # @classmethod
+    # def get_service(cls, service_name):
+    #     match service_name:
+    #         case "drive":
+    #             version = "v3"
+    #
+    #         case "sheets":
+    #             version = "v4"
+    #
+    #         case _:
+    #             return
+    #
+    #     service = build(service_name, version, credentials=cls.get_credentials(), cache_discovery=False)
+    #     return service
 
     @staticmethod
     def get_credentials():
@@ -58,7 +58,7 @@ class ServicesHelper:
 
 
 class GoogleDrive:
-    drive_service = ServicesHelper.get_service('drive')
+    drive_service = build('drive', 'v3', credentials=ServicesHelper.get_credentials(), cache_discovery=False)
 
     @classmethod
     def execute_query(cls, query, fields='files(id, name)'):
@@ -130,7 +130,7 @@ class GoogleDrive:
 
 
 class GoogleSheets:
-    sheet_service = ServicesHelper.get_service('sheets')
+    sheet_service = build('sheets', 'v4', credentials=ServicesHelper.get_credentials(), cache_discovery=False)
     cache = {}
 
     @classmethod
