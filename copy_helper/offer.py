@@ -2,14 +2,14 @@ import dataclasses
 import logging
 import time
 
+import requests
+
 from . import google_services
 from . import paths
 from . import settings
 from . import tools
 
 MAX_CACHE_DURATION_SECONDS = 60 * 60 * 6
-
-ALLOWED_STATUSES = ['Live', 'Restricted', 'Budget Limits']
 
 
 class OffersCache:
@@ -263,9 +263,6 @@ class Offer:
         if not offer_info:
             raise OfferNotFound(offer_name)
 
-        if offer_info['status'] not in ALLOWED_STATUSES:
-            raise StatusNotAllowed(offer_name, offer_info['status'])
-
         return cls(
             name=offer_info['name'],
             status=offer_info['status'],
@@ -349,6 +346,129 @@ class Offer:
         for column in self._raw_column_values:
             if column['id'] == monday_id:
                 return column['text']
+
+    def field(self, field_name):
+        for column in self._raw_column_values:
+            if column['column']['title'] == field_name:
+                return column['text']
+
+
+# WRONG_OFFERS = {
+#         "AHMS": 8753642885,
+#         "AHTT": 8753520275,
+#         "CONO": 7101745053,
+#         "AHTG": 8721191855
+#     }
+def find_offer(offer_name):
+def validate_offer_google_drive_url(offer_monday_fields):
+    offer_name = offer_monday_fields['name']
+    google_drive_offer_folder_url = offer_monday_fields.get('Copy Location')
+    if not google_drive_offer_folder_url:
+        logging.warning(f'Google drive offer folder url was not found in Monday, starting manual search')
+        google_drive_folder_id = find_offer_folder_manually(offer_name)
+
+    else:
+        raw_google_drive_folder_id = google_drive_offer_folder_url.split('/folders/')[1]
+
+        if not google_services.GoogleDrive.get_folder_by_name('Lift', raw_google_drive_folder_id, False):
+            logging.warning(
+                f'Something wrong with Copy Location url of offer {offer_name}, no lift folder was found in given folder')
+
+            maybe_google_drive_folder_id = google_services.GoogleDrive.get_folder_by_name('HTML+SL',
+                                                                                          raw_google_drive_folder_id,
+                                                                                          strict=False)
+            if maybe_google_drive_folder_id:
+                google_drive_folder_id = maybe_google_drive_folder_id
+            else:
+                logging.warning(f'Google drive offer folder url was incorrect in Monday, starting manual search')
+                google_drive_folder_id = find_offer_folder_manually(offer_name)
+        else:
+            google_drive_folder_id = raw_google_drive_folder_id
+    offer_monday_fields['Copy Location'] = 'https://drive.google.com/drive/folders/' + google_drive_folder_id
+    return offer_monday_fields
+
+
+def find_offer_folder_manually(offer_name):
+    offer_general_folder = OfferGoogleDriveHelper.get_offer_general_folder(offer_name)
+    google_drive_folder_id = OfferGoogleDriveHelper.get_offer_folder_id(offer_name,
+                                                                        offer_general_folder['id'])
+
+    if not google_drive_folder_id:
+        logging.warning(f'Google drive folder id was not found for offer {offer_name}')
+
+    return google_drive_folder_id
+
+
+def get_raw_offer_monday_fields(offer_name, board_id, wrong_offers, token):
+    item_id = wrong_offers.get(offer_name)
+
+    if item_id:
+        query = '''
+                query ($value: ID!) {
+                  items(ids: [$value]) {
+                    id
+                    name
+                    column_values {
+                      id
+                      value
+                      type
+                      text
+                      column {
+                        title
+                      }
+                    }
+                  }
+                }
+                '''
+
+        variables = {
+            "value": item_id,
+        }
+    else:
+        query = """
+            query ($boardId: ID!, $value: CompareValue!) {
+              boards(ids: [$boardId]) {
+                items_page(query_params: {rules: [{column_id: "name", compare_value: $value, operator: contains_text}]}) {
+                  items {
+                    id
+                    name
+                    column_values {
+                      id
+                      text
+                      column {
+                        title
+                      }
+                    }
+                  }
+                }
+              }
+            }
+            """
+
+        variables = {
+            "boardId": board_id,
+            "value": offer_name,
+        }
+
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json",
+    }
+
+    response = requests.post(
+        'https://api.monday.com/v2',
+        json={"query": query, "variables": variables},
+        headers=headers
+    )
+
+    raw_response_dict = response.json()
+
+    raw_columns = raw_response_dict['data']['items'][0] if item_id else \
+        raw_response_dict['data']['boards'][0]['items_page']['items'][0]
+
+    raw_offer_monday_fields = {column['column']['title']: column['text'] for column in raw_columns}
+    raw_offer_monday_fields['name'] = offer_name
+    return raw_offer_monday_fields
 
 
 class OfferException(Exception):

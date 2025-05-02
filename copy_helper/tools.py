@@ -17,27 +17,62 @@ def write_json_file(path, data):
 
 
 def get_product_info_from_monday(token, board_id, product_name):
-    query = """
-    query ($boardId: ID!, $value: CompareValue!) {
-      boards(ids: [$boardId]) {
-        items_page(query_params: {rules: [{column_id: "name", compare_value: $value, operator: contains_text}]}) {
-          items {
-            id
-            name
-            column_values {
-              id
-              text
+    WRONG_OFFERS = {
+        "AHMS": 8753642885,
+        "AHTT": 8753520275,
+        "CONO": 7101745053,
+        "AHTG": 8721191855
+    }
+
+    item_id = WRONG_OFFERS.get(product_name)
+
+    if item_id:
+        query = '''
+            query ($value: ID!) {
+              items(ids: [$value]) {
+                id
+                name
+                column_values {
+                  id
+                  value
+                  type
+                  text
+                  column {
+                    title
+                  }
+                }
+              }
+            }
+            '''
+
+        variables = {
+            "value": item_id,
+        }
+    else:
+        query = """
+        query ($boardId: ID!, $value: CompareValue!) {
+          boards(ids: [$boardId]) {
+            items_page(query_params: {rules: [{column_id: "name", compare_value: $value, operator: contains_text}]}) {
+              items {
+                id
+                name
+                column_values {
+                  id
+                  text
+                  column {
+                    title
+                  }
+                }
+              }
             }
           }
         }
-      }
-    }
-    """
+        """
 
-    variables = {
-        "boardId": board_id,
-        "value": product_name,
-    }
+        variables = {
+            "boardId": board_id,
+            "value": product_name,
+        }
 
     headers = {
         "Authorization": f"Bearer {token}",
@@ -51,5 +86,8 @@ def get_product_info_from_monday(token, board_id, product_name):
     )
 
     raw_response_dict = response.json()
+
+    if item_id:
+        return raw_response_dict['data']['items'][0]
 
     return raw_response_dict['data']['boards'][0]['items_page']['items'][0]

@@ -174,3 +174,4 @@ if __name__ == "__main__":
             logging.critical(f'Got Unexpected Error! Details : {e}')
             logging.debug(traceback.format_exc())
             logging.info('Returning to main page')
+            exit()
