@@ -1,4 +1,4 @@
-import dataclasses
+import json
 import logging
 import time
 
@@ -6,7 +6,6 @@ import requests
 
 from . import google_services
 from . import paths
-from . import settings
 from . import tools
 
 MAX_CACHE_DURATION_SECONDS = 60 * 60 * 6
@@ -53,225 +52,192 @@ class OffersCache:
                 logging.info(f'Cache for offer {option} cleared')
 
 
-class OfferGoogleDriveHelper:
-
-    @staticmethod
-    def get_copy_files(lift_folder):
-        lift_folder_files = google_services.GoogleDrive.get_files_from_folder(lift_folder['id'])
-
-        lift_file = None
-        mjml_found = False
-
-        sl_file = None
-
-        for file in lift_folder_files:
-            if not mjml_found:
-                if (file['name'].lower().endswith('.html')) and ('mjml' in file['name'].lower()) and (
-                        'SL' not in file['name']):
-                    lift_file = file
-                    mjml_found = True
-                    logging.debug(f"Found copy file (mjml): {lift_file['name']}")
-
-                elif (not lift_file) and (file['name'].lower().endswith('.html')) and ('SL' not in file['name']):
-                    lift_file = file
-
-            if not sl_file:
-                if 'sl' in file['name'].lower():
-                    sl_file = file
-                    logging.debug(f"Found SL file: {sl_file['name']}")
-
-            if mjml_found and sl_file:
-                break
-
-        return lift_file, sl_file
-
-    @staticmethod
-    def get_offer_general_folder(offer_name):
-        for partner_folder in google_services.GoogleDrive.get_folders_of_folder(
-                settings.GeneralSettings.parent_folder_id):
-
-            partner_folder_id = partner_folder['id']
-            offer_general_folder = google_services.GoogleDrive.get_folder_by_name(offer_name, partner_folder_id, False)
-            if offer_general_folder:
-                return offer_general_folder
-
-        logging.warning(f'No Partners with offer {offer_name} was found in GoogleDrive')
-
-    @staticmethod
-    def get_offer_folder_id(offer_name, offer_general_folder):
-        offer_folder_id = google_services.GoogleDrive.get_folder_by_name('HTML+SL', offer_general_folder, strict=False)
-        if not offer_folder_id:
-            logging.debug(
-                f'Folder "HTML+SL" was not found for offer {offer_name}. Folder id where searching: {offer_general_folder}')
-            return
-
-        return offer_folder_id['id']
+# class OffersCache:
+#     DATABASE_CREDENTIALS = json.load(open('../SystemData/secrets.json'))['DATABASE_CREDENTIALS']
+#     redis_db = redis.Redis(host=DATABASE_CREDENTIALS['host'],
+#                            password=DATABASE_CREDENTIALS['password'], port=DATABASE_CREDENTIALS['port'],
+#                            ssl=True)
+#
+#     @classmethod
+#     def get_cached_offer(cls, offer_name):
+#         logging.debug('Getting offer cache')
+#         cached_offer_info = cls.redis_db.get(offer_name)
+#         if cached_offer_info:
+#             cached_offer_info = json.loads(cached_offer_info.decode('utf-8'))
+#         return cached_offer_info
+#
+#     @classmethod
+#     def set_offer_cache(cls, offer_info):
+#         cls.redis_db.set(offer_info['name'], json.dumps(offer_info), ex=MAX_CACHE_DURATION_SECONDS)
+#         return offer_info
+#
+#     @classmethod
+#     def clear_offer_cache(cls, offer_name):
+#         cls.redis_db.delete(offer_name)
 
 
-class OfferGoogleSheetHelper:
-    @staticmethod
-    def get_priority_offer_coordinates(offer_name, pages_to_search):
-        for page in pages_to_search:
-            priority_product_index = google_services.GoogleSheets.get_table_index_of_value(
-                settings.GeneralSettings.priority_products_table_id, offer_name, f'{page}!A:A', is_row=False,
-                strict=False)
-
-            if priority_product_index:
-                return priority_product_index, page
-
-        return False, False
-
-
-class OfferInfoFinder:
+class Offer:
     def __init__(self, offer_name):
         self.name = offer_name
 
-    def find_offer_info(self):
+    def find_offer_info(self, board_id, partners_folder_id):
+        # offer_cached_info = OffersCache.get_cached_offer(self.name)
+        # if offer_cached_info:
+
         offer_cached_info = OffersCache.get_cache().get(self.name)
-
-        if not offer_cached_info:
-            logging.debug(f'Offer {self.name} was not found in cache')
-            offer_info = self._get_new_offer_info()
-            OffersCache.set_offer_cache(offer_info)
-
-        elif offer_cached_info['creation_timestamp'] + MAX_CACHE_DURATION_SECONDS < time.time():
-            logging.debug(f'Cache for offer {self.name} expired')
-            offer_info = self._get_new_offer_info()
-            OffersCache.set_offer_cache(offer_info)
-
-        else:
+        if offer_cached_info and offer_cached_info['creation_timestamp'] + MAX_CACHE_DURATION_SECONDS < time.time():
             logging.debug(f'Found valid cache for {self.name}')
-            offer_info = offer_cached_info
+            return offer_cached_info
 
-        return offer_info
-
-    def complain(self, text):
-        logging.warning(f'Something wrong with offer {self.name}. Details : {text}')
-        with open(paths.PATH_TO_FOLDER_SYSTEM_DATA + 'wrong_offers.txt', 'a', encoding='utf-8') as file:
-            file.write(text + '\n')
-
-    def _get_new_offer_info(self):
+        logging.debug(f'Offer {self.name} was not found in cache')
         logging.debug(f'Getting new info to cache for offer {self.name}')
-        raw_offer_info = self._get_raw_offer_info()
-        offer_info = self._process_raw_offer_info(raw_offer_info)
+        raw_offer_monday_fields = self._get_raw_offer_info(board_id)
+        offer_info = self._process_raw_offer_info(raw_offer_monday_fields, partners_folder_id)
+
+        OffersCache.set_offer_cache(offer_info)
 
         return offer_info
 
-    def _get_raw_offer_info(self):
+    def _get_raw_offer_info(self, board_id):
         logging.info(f'Getting raw info for {self.name} from backend')
-        raw_offer_info = None
-        if settings.GeneralSettings.niche != "BizzOpp":
-            # offers_info_endpoint = 'https://prior-shea-inri-a582c73b.koyeb.app/monday/product/'
-            # offer_info_request = requests.get(
-            #     offers_info_endpoint + self.name + f'?requester=copy-helper-{settings.GeneralSettings.machine_id}')
-            #
-            # if not offer_info_request.ok:
-            #     logging.debug(f'Offer {self.name} was not found at backend')
-            #     raise OfferNotFound(self.name)
-            #
-            # raw_offer_info = offer_info_request.json()
 
-            raw_offer_info = tools.get_product_info_from_monday(settings.GeneralSettings.monday_token,
-                                                                settings.GeneralSettings.monday_id, self.name)
+        WRONG_OFFERS = {
+            "AHMS": 8753642885,
+            "AHTT": 8753520275,
+            "CONO": 7101745053,
+            "AHTG": 8721191855
+        }
 
+        item_id = WRONG_OFFERS.get(self.name)
 
-        elif settings.GeneralSettings.niche == "BizzOpp":
-            mock_response = {"column_values": [{"id": "status7", "text": "Live"},
-                                               {"id": "_____",
-                                                "text": "BizzOpp"}]}
+        if item_id:
+            query = '''
+                    query ($value: ID!) {
+                      items(ids: [$value]) {
+                        id
+                        name
+                        column_values {
+                          id
+                          value
+                          type
+                          text
+                          column {
+                            title
+                          }
+                        }
+                      }
+                    }
+                    '''
 
-            raw_offer_info = mock_response
+            variables = {
+                "value": item_id,
+            }
+        else:
+            query = """
+                query ($boardId: ID!, $value: CompareValue!) {
+                  boards(ids: [$boardId]) {
+                    items_page(query_params: {rules: [{column_id: "name", compare_value: $value, operator: contains_text}]}) {
+                      items {
+                        id
+                        name
+                        column_values {
+                          id
+                          text
+                          column {
+                            title
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+                """
 
-        return raw_offer_info
+            variables = {
+                "boardId": board_id,
+                "value": self.name,
+            }
 
-    def _process_raw_offer_info(self, raw_offer_info):
+        headers = {
+            "Authorization": f"Bearer {json.load(open('../SystemData/secrets.json'))['MONDAY_TOKEN']}",
+            "Content-Type": "application/json",
+        }
+
+        response = requests.post(
+            'https://api.monday.com/v2',
+            json={"query": query, "variables": variables},
+            headers=headers
+        )
+
+        raw_response_dict = response.json()
+
+        raw_columns = raw_response_dict['data']['items'][0] if item_id else \
+            raw_response_dict['data']['boards'][0]['items_page']['items'][0]
+
+        raw_offer_monday_fields = {column['column']['title']: column['text'] for column in raw_columns}
+        raw_offer_monday_fields['name'] = self.name
+        raw_offer_monday_fields['is_priority'] = True
+        raw_offer_monday_fields['creation_timestamp'] = time.time()
+        return raw_offer_monday_fields
+
+    def _process_raw_offer_info(self, raw_offer_info, partners_folder_id):
         if not raw_offer_info:
             raise OfferNotFound(self.name)
 
         logging.debug(f'Processing raw offer {self.name} info')
 
-        processed_offer_info = {'name': self.name, 'raw_column_values': raw_offer_info['column_values'],
-                                'creation_timestamp': time.time(),
-                                'is_priority': True}  # at first treat all offers as priority
+        offer_info = self.validate_offer_google_drive_url(raw_offer_info, partners_folder_id)
 
-        for column in raw_offer_info['column_values']:
-            if column['id'] == 'status7':
-                processed_offer_info['status'] = column['text']
+        return offer_info
 
-            elif column['id'] == '_____':
-                raw_google_drive_folder_url = column['text']
-                google_drive_folder_id = self._find_offer_google_drive_folder_id(raw_google_drive_folder_url)
-                if not google_drive_folder_id:
-                    raise OfferFolderIdNotFound(self.name)
-
-                processed_offer_info['google_drive_folder_id'] = google_drive_folder_id
-
-        return processed_offer_info
-
-    def _find_offer_google_drive_folder_id(self, raw_google_drive_offer_folder_url):
-        if raw_google_drive_offer_folder_url:
-            logging.debug('Checking if folder in Monday actually for HTML+SL folder')
-
-            if raw_google_drive_offer_folder_url == "BizzOpp":
-                logging.debug('Got a BizzOpp product, starting manual search')
-                return self._find_offer_folder_manually()
-
-            raw_google_drive_folder_id = raw_google_drive_offer_folder_url.split('/folders/')[1]
-            maybe_google_drive_folder_id = OfferGoogleDriveHelper.get_offer_folder_id(self.name,
-                                                                                      raw_google_drive_folder_id)
-
-            if maybe_google_drive_folder_id:
-                self.complain(f'{self.name} - wrong link for google drive in Monday')
-                return maybe_google_drive_folder_id
-
-            if not google_services.GoogleDrive.get_folder_by_name('Lift', raw_google_drive_folder_id, False):
-                logging.warning(f'Google drive offer folder url was not found in Monday, starting manual search')
-                self.complain(f'{self.name} - link for google drive missing in Monday')
-                return self._find_offer_folder_manually()
-
-            return raw_google_drive_folder_id
+    def validate_offer_google_drive_url(self, offer_monday_fields, partners_folder_id):
+        offer_name = offer_monday_fields['name']
+        google_drive_offer_folder_url = offer_monday_fields.get('Copy Location')
+        if not google_drive_offer_folder_url:
+            logging.warning(f'Google drive offer folder url was not found in Monday, starting manual search')
+            google_drive_folder_id = self.find_offer_folder_manually(partners_folder_id)
 
         else:
-            logging.warning(f'Google drive offer folder url was not found in Monday, starting manual search')
-            self.complain(f'{self.name} - link for google drive missing in Monday')
+            raw_google_drive_folder_id = google_drive_offer_folder_url.split('/folders/')[1]
 
-            return self._find_offer_folder_manually()
+            if not google_services.GoogleDrive.get_folder_by_name('Lift', raw_google_drive_folder_id, False):
+                logging.warning(
+                    f'Something wrong with Copy Location url of offer {offer_name}, no lift folder was found in given folder')
 
-    def _find_offer_folder_manually(self):
-        offer_general_folder = OfferGoogleDriveHelper.get_offer_general_folder(self.name)
-        google_drive_folder_id = OfferGoogleDriveHelper.get_offer_folder_id(self.name,
-                                                                            offer_general_folder['id'])
+                maybe_google_drive_folder_id = google_services.GoogleDrive.get_folder_by_name('HTML+SL',
+                                                                                              raw_google_drive_folder_id,
+                                                                                              strict=False)
+                if maybe_google_drive_folder_id:
+                    google_drive_folder_id = maybe_google_drive_folder_id
+                else:
+                    logging.warning(f'Google drive offer folder url was incorrect in Monday, starting manual search')
+                    google_drive_folder_id = self.find_offer_folder_manually(partners_folder_id)
+            else:
+                google_drive_folder_id = raw_google_drive_folder_id
+        offer_monday_fields['Copy Location'] = 'https://drive.google.com/drive/folders/' + google_drive_folder_id
+        return offer_monday_fields
 
-        if not google_drive_folder_id:
-            logging.warning(f'Google drive folder id was not found for offer {self.name}')
+    def find_offer_folder_manually(self, partners_folder_id):
+        offer_general_folder = self.get_offer_general_folder(partners_folder_id)
 
-        return google_drive_folder_id
+        offer_folder_id = google_services.GoogleDrive.get_folder_by_name('HTML+SL', offer_general_folder, strict=False)
+        if offer_folder_id:
+            offer_folder_id = offer_folder_id['id']
+        else:
+            logging.warning(
+                f'Folder "HTML+SL" was not found for offer {self.name}. Folder id where searching: {offer_general_folder}')
 
+        return offer_folder_id
 
-@dataclasses.dataclass
-class Offer:
-    name: str
-    status: str
-    google_drive_folder_id: str
-    is_priority: bool
-    _raw_column_values: dict
-    _raw_offer_info: dict
+    def get_offer_general_folder(self, partners_folder_id):
+        for partner_folder in google_services.GoogleDrive.get_folders_of_folder(partners_folder_id):
 
-    @classmethod
-    def find(cls, offer_name):
-        offer_info = OfferInfoFinder(offer_name).find_offer_info()
-        if not offer_info:
-            raise OfferNotFound(offer_name)
+            partner_folder_id = partner_folder['id']
+            offer_general_folder = google_services.GoogleDrive.get_folder_by_name(self.name, partner_folder_id, False)
+            if offer_general_folder:
+                return offer_general_folder
 
-        return cls(
-            name=offer_info['name'],
-            status=offer_info['status'],
-            google_drive_folder_id=offer_info['google_drive_folder_id'],
-            is_priority=offer_info['is_priority'],
-
-            _raw_column_values=offer_info['raw_column_values'],
-            _raw_offer_info=offer_info
-        )
+        logging.warning(f'No Partners with offer {self.name} was found in GoogleDrive')
 
     def get_priority_footer_values(self, tableID, pages, text_column, link_column, id_column):
         logging.debug(f'Searching for footer for offer {self.name}')
@@ -288,8 +254,7 @@ class Offer:
                 break
 
         if not priority_product_index:
-            self.is_priority = False
-            self.update_priority(False)
+            self.update_offer_cache('is_priority', False)
             return '', '', ''
 
         priority_product_index += 1
@@ -323,152 +288,11 @@ class Offer:
         return text_value, unsub_url, unsub_id
 
     def update_offer_cache(self, key, new_value):
-        offer_info = self._raw_offer_info
+        # offer_info = OffersCache.get_cached_offer(self.name)
+        offer_info = OffersCache.get_cache().get(self.name)
         offer_info[key] = new_value
 
         OffersCache.set_offer_cache(offer_info)
-
-    def update_priority(self, new_value):
-        self.update_offer_cache('is_priority', new_value)
-
-    def tracking_id(self, tracking_id_name):
-        tracking_id_to_monday_id = {
-            'volume_green': '_____8',
-            'img_it': 'text0',
-            'rt_tm': 'text21__1',
-            'cm_tm': 'dup__of_rt_tm_mkn9g0sh'
-        }
-        monday_id = tracking_id_to_monday_id.get(tracking_id_name)
-        if not monday_id:
-            logging.warning(f'{tracking_id_name} was not found for {self.name}')
-            return f'{tracking_id_name}_NOT_FOUND'
-
-        for column in self._raw_column_values:
-            if column['id'] == monday_id:
-                return column['text']
-
-    def field(self, field_name):
-        for column in self._raw_column_values:
-            if column['column']['title'] == field_name:
-                return column['text']
-
-
-# WRONG_OFFERS = {
-#         "AHMS": 8753642885,
-#         "AHTT": 8753520275,
-#         "CONO": 7101745053,
-#         "AHTG": 8721191855
-#     }
-def find_offer(offer_name):
-def validate_offer_google_drive_url(offer_monday_fields):
-    offer_name = offer_monday_fields['name']
-    google_drive_offer_folder_url = offer_monday_fields.get('Copy Location')
-    if not google_drive_offer_folder_url:
-        logging.warning(f'Google drive offer folder url was not found in Monday, starting manual search')
-        google_drive_folder_id = find_offer_folder_manually(offer_name)
-
-    else:
-        raw_google_drive_folder_id = google_drive_offer_folder_url.split('/folders/')[1]
-
-        if not google_services.GoogleDrive.get_folder_by_name('Lift', raw_google_drive_folder_id, False):
-            logging.warning(
-                f'Something wrong with Copy Location url of offer {offer_name}, no lift folder was found in given folder')
-
-            maybe_google_drive_folder_id = google_services.GoogleDrive.get_folder_by_name('HTML+SL',
-                                                                                          raw_google_drive_folder_id,
-                                                                                          strict=False)
-            if maybe_google_drive_folder_id:
-                google_drive_folder_id = maybe_google_drive_folder_id
-            else:
-                logging.warning(f'Google drive offer folder url was incorrect in Monday, starting manual search')
-                google_drive_folder_id = find_offer_folder_manually(offer_name)
-        else:
-            google_drive_folder_id = raw_google_drive_folder_id
-    offer_monday_fields['Copy Location'] = 'https://drive.google.com/drive/folders/' + google_drive_folder_id
-    return offer_monday_fields
-
-
-def find_offer_folder_manually(offer_name):
-    offer_general_folder = OfferGoogleDriveHelper.get_offer_general_folder(offer_name)
-    google_drive_folder_id = OfferGoogleDriveHelper.get_offer_folder_id(offer_name,
-                                                                        offer_general_folder['id'])
-
-    if not google_drive_folder_id:
-        logging.warning(f'Google drive folder id was not found for offer {offer_name}')
-
-    return google_drive_folder_id
-
-
-def get_raw_offer_monday_fields(offer_name, board_id, wrong_offers, token):
-    item_id = wrong_offers.get(offer_name)
-
-    if item_id:
-        query = '''
-                query ($value: ID!) {
-                  items(ids: [$value]) {
-                    id
-                    name
-                    column_values {
-                      id
-                      value
-                      type
-                      text
-                      column {
-                        title
-                      }
-                    }
-                  }
-                }
-                '''
-
-        variables = {
-            "value": item_id,
-        }
-    else:
-        query = """
-            query ($boardId: ID!, $value: CompareValue!) {
-              boards(ids: [$boardId]) {
-                items_page(query_params: {rules: [{column_id: "name", compare_value: $value, operator: contains_text}]}) {
-                  items {
-                    id
-                    name
-                    column_values {
-                      id
-                      text
-                      column {
-                        title
-                      }
-                    }
-                  }
-                }
-              }
-            }
-            """
-
-        variables = {
-            "boardId": board_id,
-            "value": offer_name,
-        }
-
-    headers = {
-        "Authorization": f"Bearer {token}",
-        "Content-Type": "application/json",
-    }
-
-    response = requests.post(
-        'https://api.monday.com/v2',
-        json={"query": query, "variables": variables},
-        headers=headers
-    )
-
-    raw_response_dict = response.json()
-
-    raw_columns = raw_response_dict['data']['items'][0] if item_id else \
-        raw_response_dict['data']['boards'][0]['items_page']['items'][0]
-
-    raw_offer_monday_fields = {column['column']['title']: column['text'] for column in raw_columns}
-    raw_offer_monday_fields['name'] = offer_name
-    return raw_offer_monday_fields
 
 
 class OfferException(Exception):
