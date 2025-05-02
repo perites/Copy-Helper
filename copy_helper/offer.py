@@ -85,7 +85,7 @@ class Offer:
         # if offer_cached_info:
 
         offer_cached_info = OffersCache.get_cache().get(self.name)
-        if offer_cached_info and offer_cached_info['creation_timestamp'] + MAX_CACHE_DURATION_SECONDS < time.time():
+        if offer_cached_info and (offer_cached_info['creation_timestamp'] + MAX_CACHE_DURATION_SECONDS > time.time()):
             logging.debug(f'Found valid cache for {self.name}')
             return offer_cached_info
 
@@ -159,7 +159,7 @@ class Offer:
             }
 
         headers = {
-            "Authorization": f"Bearer {json.load(open('../SystemData/secrets.json'))['MONDAY_TOKEN']}",
+            "Authorization": f"Bearer {json.load(open('SystemData/secrets.json'))['MONDAY_TOKEN']}",
             "Content-Type": "application/json",
         }
 
@@ -171,8 +171,8 @@ class Offer:
 
         raw_response_dict = response.json()
 
-        raw_columns = raw_response_dict['data']['items'][0] if item_id else \
-            raw_response_dict['data']['boards'][0]['items_page']['items'][0]
+        raw_columns = raw_response_dict['data']['items'][0]['column_values'] if item_id else \
+            raw_response_dict['data']['boards'][0]['items_page']['items'][0]['column_values']
 
         raw_offer_monday_fields = {column['column']['title']: column['text'] for column in raw_columns}
         raw_offer_monday_fields['name'] = self.name
@@ -249,7 +249,7 @@ class Offer:
                                                                           f'{page}!A:A', is_row=False,
                                                                           strict=False)
 
-            if priority_product_index:
+            if index:
                 priority_product_index, priority_product_page = index, page
                 break
 
