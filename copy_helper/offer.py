@@ -1,4 +1,3 @@
-import json
 import logging
 import time
 
@@ -77,10 +76,11 @@ class OffersCache:
 
 
 class Offer:
-    def __init__(self, offer_name):
+    def __init__(self, offer_name, board_id=None, partners_folder_id=None, monday_token=None):
         self.name = offer_name
+        self.fields = self.find_offer_info(board_id, partners_folder_id, monday_token)
 
-    def find_offer_info(self, board_id, partners_folder_id):
+    def find_offer_info(self, board_id, partners_folder_id, monday_token):
         # offer_cached_info = OffersCache.get_cached_offer(self.name)
         # if offer_cached_info:
 
@@ -89,16 +89,20 @@ class Offer:
             logging.debug(f'Found valid cache for {self.name}')
             return offer_cached_info
 
+        if not board_id or not partners_folder_id or not monday_token:
+            logging.error('Offer was not found in cache and no board id or partners_folder_id was provided')
+            raise OfferNotFound(self.name)
+
         logging.debug(f'Offer {self.name} was not found in cache')
         logging.debug(f'Getting new info to cache for offer {self.name}')
-        raw_offer_monday_fields = self._get_raw_offer_info(board_id)
+        raw_offer_monday_fields = self._get_raw_offer_info(board_id, monday_token)
         offer_info = self._process_raw_offer_info(raw_offer_monday_fields, partners_folder_id)
 
         OffersCache.set_offer_cache(offer_info)
 
         return offer_info
 
-    def _get_raw_offer_info(self, board_id):
+    def _get_raw_offer_info(self, board_id, monday_token):
         logging.info(f'Getting raw info for {self.name} from backend')
 
         WRONG_OFFERS = {
@@ -159,7 +163,7 @@ class Offer:
             }
 
         headers = {
-            "Authorization": f"Bearer {json.load(open('SystemData/secrets.json'))['MONDAY_TOKEN']}",
+            "Authorization": f"Bearer {monday_token}",
             "Content-Type": "application/json",
         }
 
@@ -255,7 +259,12 @@ class Offer:
 
         if not priority_product_index:
             self.update_offer_cache('is_priority', False)
-            return '', '', ''
+            return {
+                'is_priority': False,
+                'unsub_text': '',
+                'unsub_link': '',
+                'unsub_id': ''
+            }
 
         priority_product_index += 1
 
@@ -285,7 +294,12 @@ class Offer:
             else:
                 unsub_id = unsub_id[0][0]
 
-        return text_value, unsub_url, unsub_id
+        return {
+            'is_priority': True,
+            'unsub_text': text_value,
+            'unsub_url': unsub_url,
+            'unsub_id': unsub_id
+        }
 
     def update_offer_cache(self, key, new_value):
         # offer_info = OffersCache.get_cached_offer(self.name)
@@ -293,6 +307,62 @@ class Offer:
         offer_info[key] = new_value
 
         OffersCache.set_offer_cache(offer_info)
+
+    @staticmethod
+    def get_copy_files(lift_folder):
+        lift_folder_files = google_services.GoogleDrive.get_files_from_folder(lift_folder['id'])
+
+        lift_file = None
+        mjml_found = False
+
+        sl_file = None
+
+        for file in lift_folder_files:
+            if not mjml_found:
+                if (file['name'].lower().endswith('.html')) and ('mjml' in file['name'].lower()) and (
+                        'SL' not in file['name']):
+                    lift_file = file
+                    mjml_found = True
+                    logging.debug(f"Found copy file (mjml): {lift_file['name']}")
+
+                elif (not lift_file) and (file['name'].lower().endswith('.html')) and ('SL' not in file['name']):
+                    lift_file = file
+
+            if not sl_file:
+                if 'sl' in file['name'].lower():
+                    sl_file = file
+                    logging.debug(f"Found SL file: {sl_file['name']}")
+
+            if mjml_found and sl_file:
+                break
+
+        return lift_file, sl_file
+
+    def get_copy_files_content(self, lift_number):
+        logging.info(f'Searching copy files for offer {self.name} and lift {lift_number}')
+
+        lift_folder = google_services.GoogleDrive.get_folder_by_name(f'Lift {lift_number}',
+                                                                     self.fields['Copy Location'].split('/folders/')[1])
+
+        if not lift_folder:
+            logging.warning(
+                f'Could not find folder Lift {lift_number} in offer {self.name}. Please check if folder exist on google drive')
+            lift_file, sl_file = None, None
+        else:
+            lift_file, sl_file = self.get_copy_files(lift_folder)
+
+        lift_file_content, sl_file_content = None, None
+        if lift_file:
+            lift_file_content = google_services.GoogleDrive.get_file_content(lift_file)
+        else:
+            logging.warning(f'Lift file for {self.name} was not found')
+
+        if sl_file:
+            sl_file_content = google_services.GoogleDrive.get_file_content(sl_file)
+        else:
+            logging.warning(f'Sl file for {self.name} was not found')
+
+        return lift_file_content, sl_file_content
 
 
 class OfferException(Exception):

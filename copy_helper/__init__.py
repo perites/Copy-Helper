@@ -1,3 +1,4 @@
+from . import copy_finder
 from . import copy_maker
 from . import domain
 from . import offer
