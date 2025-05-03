@@ -180,7 +180,7 @@ class StylesHelper:
             'edit your e-mail notification preferences or unsubscribe',
             'Privacy Policy',
             'unsubscribe here',
-            'click here'
+            'click here',
             'here',
         ]
 

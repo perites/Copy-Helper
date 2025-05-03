@@ -218,7 +218,7 @@ class Offer:
                     google_drive_folder_id = self.find_offer_folder_manually(partners_folder_id)
             else:
                 google_drive_folder_id = raw_google_drive_folder_id
-        offer_monday_fields['Copy Location'] = 'https://drive.google.com/drive/folders/' + google_drive_folder_id
+        offer_monday_fields['Copy Location'] = 'https://drive.google.com/drive/folders/' + google_drive_folder_id['id']
         return offer_monday_fields
 
     def find_offer_folder_manually(self, partners_folder_id):
