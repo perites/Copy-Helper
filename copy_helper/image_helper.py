@@ -50,36 +50,36 @@ class ImageHelper:
             logging.debug(traceback.format_exc())
 
     @classmethod
-    def add_image_block(cls, lift_file_content, str_copy, image_block):
-        logging.info(f'Adding image block to copy {str_copy}')
+    def add_image_block(cls, lift_file_content, image_block):
 
-        lift_file_content = lift_file_content.replace('<br><br>',
-                                                      f'<!-- image-block-start -->{image_block}<!-- image-block-end -->',
-                                                      1)
         return lift_file_content
 
     @classmethod
-    def process_images(cls, lift_file_content, str_copy, image_block, img_code, date):
+    def process_images(cls, copy, image_block):
         src_part_pattern = r'src="[^"]*'
-        processed_urls = []
-        src_list = re.findall(src_part_pattern, lift_file_content)
+        images_urls = []
+        src_list = re.findall(src_part_pattern, copy.lift_html)
         if len(src_list) == 0:
-            if img_code:
+            if copy.img_code:
                 logging.info('Copy has img code and doesnt contain images')
-                lift_file_content = cls.add_image_block(lift_file_content, str_copy, image_block)
-                return lift_file_content, 0
+                logging.debug(f'Adding image block to copy {copy.str_rep}')
+                copy.lift_html = copy.lift_html.replace('<br><br>',
+                                                        f'<!-- image-block-start -->{image_block}<!-- image-block-end -->',
+                                                        1)
+
+                return copy
+
             else:
                 logging.debug('No images no image code, doing nothing')
-                return lift_file_content, -1
+                return copy
 
-        if settings.GeneralSettings.save_image_path:
-            logging.info(f'Found {len(src_list)} images, saving...')
-            for index, src_part in enumerate(src_list):
-                img_url = src_part.split('"')[1]
-                if img_url in processed_urls:
-                    continue
+        logging.info(f'Found {len(src_list)} images')
+        for index, src_part in enumerate(src_list):
+            img_url = src_part.split('"')[1]
+            if img_url not in images_urls:
+                images_urls.append(img_url)
 
-                cls.save_image(f'{str_copy}-image-{index + 1}', img_url, date)
-                processed_urls.append(img_url)
+            # cls.save_image(f'{str_copy}-image-{index + 1}', img_url, date)
 
-        return lift_file_content, len(src_list)
+        copy.lift_images = images_urls
+        return copy

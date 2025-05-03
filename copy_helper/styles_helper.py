@@ -1,66 +1,123 @@
 import logging
+import random
 import re
 
 
 class StylesHelper:
     def __init__(self, styles_settings):
-        self.priority_footer_url_template = styles_settings['PriorityFooterUrlTemplate']
-        self.links_color = styles_settings['LinksColor']
-        self.font_family = styles_settings['FontFamily']
-        self.font_size = styles_settings['FontSize']
-        self.side_padding = styles_settings['SidePadding']
-        self.upper_down_padding = styles_settings['UpperDownPadding']
-        self.add_after_priority_block = styles_settings['AddAfterPriorityBlock']
-        self.image_block = styles_settings['ImageBlock']
+        self.styles_settings = styles_settings
 
-    def make_priority_footer_html(self, footer_text, url):
-        footer_link_keywords = [
-            'edit your e-mail notification preferences or unsubscribe',
-            'Privacy Policy',
-            'unsubscribe here',
-            'here',
-        ]
+    def apply_styles(self, copy):
 
-        if not url:
-            priority_block = footer_text.replace('\n', '<br>')
-            return priority_block
+        if self.styles_settings['antispam']:
+            copy.lift_html = self.antispam_text(copy.lift_html, self.styles_settings['antispamReplacements'])
 
-        for keyword in footer_link_keywords:
-            if keyword in footer_text:
-                unsub_footer_url = self.priority_footer_url_template
+        if self.styles_settings['fontSize']:
+            font_size = self.calculate_value(self.styles_settings['fontSize'])
 
-                unsub_footer_url = unsub_footer_url.replace('PRIORITY_FOOTER_URL', url)
-                unsub_footer_url = unsub_footer_url.replace('PRIORITY_FOOTER_TEXT_URL', keyword)
+            copy.lift_html, success = self.replace_style(r'font-size\s*:\s*(16|18)?px;',
+                                                         f'font-size: {font_size};',
+                                                         copy.lift_html)
 
-                priority_block = footer_text.replace(keyword, unsub_footer_url)
-                priority_block = priority_block.replace('\n', '<br>')
-                return priority_block
+        if self.styles_settings['fontFamily']:
 
-        logging.warning(f'No keyword was found in {footer_text}')
-        footer_text = footer_text.replace('\n', '<br>')
-        footer_text += f'\n\nUNSUB-URL: {url}'
-        return footer_text
+            font_family = self.calculate_value(self.styles_settings['fontFamily'])
 
-    def apply_styles(self, lift_html):
-        if self.links_color:
-            lift_html = self.change_links_color(lift_html, self.links_color)
-
-        if self.font_family:
-            lift_html, success = self.replace_style('FontFamily', f'font-family:{self.font_family};', lift_html)
+            copy.lift_html, success = self.replace_style(r'font-family\s*:\s*([^;]+);?',
+                                                         f'font-family:{font_family};',
+                                                         copy.lift_html)
             if not success:
-                lift_html = lift_html.replace('Roboto', self.font_family)
+                copy.lift_html = copy.lift_html.replace('Roboto', self.styles_settings['fontFamily'])
 
-        if self.font_size:
-            lift_html, success = self.replace_style('FontSize', f'font-size: {self.font_size};', lift_html)
+        if self.styles_settings['sideElementsPadding'] and self.styles_settings['upperDownElementsPadding']:
+            upper_down_elements_padding = self.calculate_value(self.styles_settings['upperDownElementsPadding'])
+            side_elements_padding = self.calculate_value(self.styles_settings['sideElementsPadding'])
 
-        if self.side_padding:
-            lift_html = lift_html.replace('padding:10px 25px', f'padding:10px {self.side_padding}')
+            copy.lift_html = copy.lift_html.replace('padding:10px 25px',
+                                                    f'padding:{upper_down_elements_padding} {side_elements_padding}')
 
-        if self.upper_down_padding:
-            lift_html = lift_html.replace('padding:20px 0', f'padding:{self.upper_down_padding} 0')
-            lift_html = lift_html.replace('padding:10px 0', f'padding:{self.upper_down_padding} 0')
+            copy.lift_html = copy.lift_html.replace('padding: 10px 25px',
+                                                    f'padding:{upper_down_elements_padding} {side_elements_padding}')
 
-        return lift_html
+        if self.styles_settings['upperDownCopyPadding']:
+            upper_down_copy_padding = self.calculate_value(self.styles_settings['upperDownCopyPadding'])
+
+            copy.lift_html = copy.lift_html.replace('padding:20px 0', f'padding:{upper_down_copy_padding} 0')
+            copy.lift_html = copy.lift_html.replace('padding:10px 0', f'padding:{upper_down_copy_padding} 0')
+
+        if self.styles_settings['lineHeight']:
+            line_height = self.calculate_value(self.styles_settings['lineHeight'])
+
+            copy.lift_html = copy.lift_html.replace('line-height:1.5;', f'line-height:{line_height};')
+            copy.lift_html = copy.lift_html.replace('line-height: 1.5;', f'line-height:{line_height};')
+
+        if self.styles_settings['linksColor']:
+            links_color = self.styles_settings['linksColor'] if self.styles_settings[
+                                                                    'linksColor'] != 'random-blue' else self.get_random_blue()
+            copy.lift_html = self.change_links_color(copy.lift_html, links_color)
+
+        return copy
+
+    @staticmethod
+    def get_random_blue():
+        r = random.randint(0, 64)
+        g = random.randint(48, 160)
+        b = random.randint(192, 255)
+        return f'#{r:02x}{g:02x}{b:02x}'
+
+    @staticmethod
+    def calculate_value(value):
+
+        if isinstance(value, list):
+            return random.choice(value)
+
+        elif isinstance(value, dict):
+            return round(random.uniform(value['min'], value['max']), 4)
+
+        else:
+            return value
+
+    @staticmethod
+    def replace_style(style_pattern, new_style, source):
+
+        pattern = re.compile(style_pattern)
+        if not pattern.search(source):
+            return source, False
+
+        new_lift_html = pattern.sub(lambda match: new_style, source)
+
+        return new_lift_html, True
+
+    @classmethod
+    def change_links_color(cls, html_copy, link_color):
+        a_tag_pattern = r'<a\s+([^>]*)'
+
+        for old_a_tag in re.findall(a_tag_pattern, html_copy):
+            new_a_tag = cls.change_link_color(link_color, old_a_tag)
+            html_copy = html_copy.replace(old_a_tag, new_a_tag)
+
+        return html_copy
+
+    @classmethod
+    def change_link_color(cls, link_color, a_tag):
+        link_style = re.findall(r'style\s*=\s*"([^"]*)"', a_tag)
+        if link_style:
+            old_link_style = link_style[0]
+            new_link_style, success = cls.replace_style(r'(?<![-\w])color\s*:\s*([^;"]+)', f'color: {link_color};',
+                                                        old_link_style)
+
+            if not success:
+                link_styles_list = old_link_style.split(';')
+                link_styles_list.append(f'color: {link_color};')
+                link_styles_list = list(filter(lambda el: el, link_styles_list))
+                new_link_style = '; '.join(link_styles_list)
+
+        else:
+            old_link_style = ' '
+            new_link_style = f' style="color: {link_color};" '
+
+        new_a_tag = a_tag.replace(old_link_style, new_link_style)
+        return new_a_tag
 
     @staticmethod
     def antispam_text(text, custom_replacements):
@@ -118,49 +175,47 @@ class StylesHelper:
 
         return new_text
 
-    @staticmethod
-    def replace_style(style_name, new_value, source):
+    def make_priority_footer_html(self, footer_text, url):
+        footer_link_keywords = [
+            'edit your e-mail notification preferences or unsubscribe',
+            'Privacy Policy',
+            'unsubscribe here',
+            'click here'
+            'here',
+        ]
 
-        style_name_to_reqex = {'FontFamily': r'font-family\s*:\s*([^;]+);?',
-                               'FontSize': r'font-size\s*:\s*(16|18)?px;',
-                               'Color': r'color\s*:\s*([^;]+);?'}
+        footer_text = footer_text.replace('\n', '<br>')
+        if not url:
+            return footer_text
 
-        style_pattern = style_name_to_reqex[style_name]
+        for keyword in footer_link_keywords:
+            if keyword in footer_text:
+                unsub_footer_url = self.styles_settings['priorityBlockLink']
 
-        pattern = re.compile(style_pattern)
-        if not pattern.search(source):
-            return source, False
+                unsub_footer_url = unsub_footer_url.replace('[PRIORITY_UNSUB_URL]', url)
+                unsub_footer_url = unsub_footer_url.replace('[PRIORITY_UNSUB_TEXT_URL]', keyword)
 
-        new_lift_html = pattern.sub(lambda match: new_value, source)
+                priority_block = footer_text.replace(keyword, unsub_footer_url)
+                return priority_block
 
-        return new_lift_html, True
+        logging.warning(f'No keyword was found in {footer_text}')
+        footer_text += f'\n\nUNSUB-URL: {url}'
+        return footer_text
 
-    @classmethod
-    def change_links_color(cls, html_copy, link_color):
-        a_tag_pattern = r'<a\s+([^>]*)'
+    def add_template(self, copy):
+        template = self.styles_settings['template']
 
-        for old_a_tag in re.findall(a_tag_pattern, html_copy):
-            new_a_tag = cls.change_link_color(link_color, old_a_tag)
-            html_copy = html_copy.replace(old_a_tag, new_a_tag)
+        priority_body = self.make_priority_footer_html(copy.priority_info['unsub_text'],
+                                                       copy.priority_info['unsub_link'])
 
-        return html_copy
+        priority_block = self.styles_settings['priorityBlock'].replace('[PRIORITY_BODY]', priority_body)
+        if not template:
+            return copy.lift_html + "<br><br><br><br><br>" + priority_block
 
-    @classmethod
-    def change_link_color(cls, link_color, a_tag):
-        link_style = re.findall(r'style="([^"]*)"', a_tag)
-        if link_style:
-            old_link_style = link_style[0]
-            new_link_style, success = cls.replace_style('Color', f'color: {link_color};', old_link_style)
+        template = template.replace('[COPY_HERE]', copy.lift_html)
 
-            if not success:
-                link_styles_list = old_link_style.split(';')
-                link_styles_list.append(f'color: {link_color};')
-                link_styles_list = list(filter(lambda el: el, link_styles_list))
-                new_link_style = '; '.join(link_styles_list)
+        template = template.replace('[PRIORITY_FOOTER_HERE]', priority_block)
 
-        else:
-            old_link_style = ' '
-            new_link_style = f' style="color: {link_color};"'
+        copy.lift_html = template
 
-        new_a_tag = a_tag.replace(old_link_style, new_link_style)
-        return new_a_tag
+        return copy

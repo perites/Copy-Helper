@@ -1,4 +1,5 @@
 import datetime
+import json
 import logging
 import os
 import traceback
@@ -62,9 +63,25 @@ def get_str_copies(domain, date):
 
 
 def main_cycle():
-    domain = copy_helper.domain.Domain.create_from_dict({})
+    domain_dict = json.load(open('Settings/Domains/WorldFinReport.com/settings.json'))
+    domain_dict['styles']['template'] = open('Settings/Domains/WorldFinReport.com/template.html').read()
+    domain = copy_helper.domain.Domain(domain_dict)
+    str_copies = domain.get_copies_from_broadcast('2/20')
+    copies = [domain.create_copy(str_copy) for str_copy in str_copies]
+    for copy in copies:
+        copy = domain.find_copy(copy)
+        copy = domain.make_tracking_link(copy)
+        copy = domain.make_unsub_link(copy)
 
-    print(copy_helper.copy_maker.Copy(domain, copy_helper.offer.Offer.find('MPPX'), '7', 'TS2').make())
+        copy = copy_helper.image_helper.ImageHelper.process_images(copy, domain.styles['imageBlock'])
+
+        styles_helper = copy_helper.styles_helper.StylesHelper(domain.styles)
+        copy = styles_helper.apply_styles(copy)
+        copy = styles_helper.add_template(copy)
+        copy.lift_html = copy.lift_html.replace('urlhere', copy.tracking_link)
+        print(copy.lift_html)
+        print(copy.lift_sls)
+        print(copy.lift_images)
     exit()
 
     logging.info('Type what you want to do:')

@@ -244,6 +244,15 @@ class Offer:
         logging.warning(f'No Partners with offer {self.name} was found in GoogleDrive')
 
     def get_priority_footer_values(self, tableID, pages, text_column, link_column, id_column):
+
+        if not self.fields['is_priority']:
+            return {
+                'is_priority': False,
+                'unsub_text': '',
+                'unsub_link': '',
+                'unsub_id': ''
+            }
+
         logging.debug(f'Searching for footer for offer {self.name}')
 
         priority_product_index, priority_product_page = None, None
@@ -297,7 +306,7 @@ class Offer:
         return {
             'is_priority': True,
             'unsub_text': text_value,
-            'unsub_url': unsub_url,
+            'unsub_link': unsub_url,
             'unsub_id': unsub_id
         }
 
