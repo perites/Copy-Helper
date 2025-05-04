@@ -12,20 +12,6 @@ from . import secrets
 
 
 class ServicesHelper:
-    # @classmethod
-    # def get_service(cls, service_name):
-    #     match service_name:
-    #         case "drive":
-    #             version = "v3"
-    #
-    #         case "sheets":
-    #             version = "v4"
-    #
-    #         case _:
-    #             return
-    #
-    #     service = build(service_name, version, credentials=cls.get_credentials(), cache_discovery=False)
-    #     return service
 
     @staticmethod
     def get_credentials():
