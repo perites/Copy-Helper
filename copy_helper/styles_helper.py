@@ -33,23 +33,20 @@ class StylesHelper:
             upper_down_elements_padding = self.calculate_value(self.styles_settings['upperDownElementsPadding'])
             side_elements_padding = self.calculate_value(self.styles_settings['sideElementsPadding'])
 
-            copy.lift_html = copy.lift_html.replace('padding:10px 25px',
-                                                    f'padding:{upper_down_elements_padding} {side_elements_padding}')
-
-            copy.lift_html = copy.lift_html.replace('padding: 10px 25px',
-                                                    f'padding:{upper_down_elements_padding} {side_elements_padding}')
+            copy.lift_html, success = self.replace_style(r'padding\s*:\s*10px\s+25px',
+                                                         f'padding:{upper_down_elements_padding} {side_elements_padding}',
+                                                         copy.lift_html)
 
         if self.styles_settings['upperDownCopyPadding']:
             upper_down_copy_padding = self.calculate_value(self.styles_settings['upperDownCopyPadding'])
 
-            copy.lift_html = copy.lift_html.replace('padding:20px 0', f'padding:{upper_down_copy_padding} 0')
-            copy.lift_html = copy.lift_html.replace('padding:10px 0', f'padding:{upper_down_copy_padding} 0')
+            copy.lift_html, success = self.replace_style(r'padding\s*:\s*(10|20)px\s+0px',
+                                                         f'padding:{upper_down_copy_padding} 0', copy.lift_html)
 
         if self.styles_settings['lineHeight']:
             line_height = self.calculate_value(self.styles_settings['lineHeight'])
-
-            copy.lift_html = copy.lift_html.replace('line-height:1.5;', f'line-height:{line_height};')
-            copy.lift_html = copy.lift_html.replace('line-height: 1.5;', f'line-height:{line_height};')
+            copy.lift_html, success = self.replace_style(r'line-height\s*:\s*1.5', f'line-height:{line_height}',
+                                                         copy.lift_html)
 
         if self.styles_settings['linksColor']:
             links_color = self.styles_settings['linksColor'] if self.styles_settings[
@@ -205,16 +202,19 @@ class StylesHelper:
     def add_template(self, copy):
         template = self.styles_settings['template']
 
-        priority_body = self.make_priority_footer_html(copy.priority_info['unsub_text'],
-                                                       copy.priority_info['unsub_link'])
+        if copy.priority_info['is_priority']:
+            priority_body = self.make_priority_footer_html(copy.priority_info['unsub_text'],
+                                                           copy.priority_info['unsub_link'])
 
-        priority_block = self.styles_settings['priorityBlock'].replace('[PRIORITY_BODY]', priority_body)
+            priority_block = self.styles_settings['priorityBlock'].replace('[PRIORITY_BODY]', priority_body)
+            template = template.replace('[PRIORITY_FOOTER_HERE]', priority_block)
+        else:
+            priority_block = ''
+
         if not template:
-            return copy.lift_html + "<br><br><br><br><br>" + priority_block
+            return copy.lift_html + '<br><br><br><br><br>' + priority_block
 
         template = template.replace('[COPY_HERE]', copy.lift_html)
-
-        template = template.replace('[PRIORITY_FOOTER_HERE]', priority_block)
 
         copy.lift_html = template
 
