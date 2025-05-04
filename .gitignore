@@ -1,3 +1,5 @@
 /SystemData/
 /Settings/
 /main-log.log
+/copy_helper/offers_info_cache.json
+/copy_helper/secrets.json

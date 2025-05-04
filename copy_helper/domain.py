@@ -1,9 +1,9 @@
 import dataclasses
-import json
 import logging
 import re
 
 from . import google_services
+from . import secrets
 from .offer import Offer
 
 
@@ -98,7 +98,7 @@ class Domain:
 
     def find_copy(self, copy):
         offer = Offer(copy.offer_name, self.products['mondayId'], self.products['partnersFolderId'],
-                      json.load(open('SystemData/secrets.json'))['MONDAY_TOKEN'])
+                      secrets.MONDAY_TOKEN)
 
         if offer.fields['Status'] not in self.products['allowedStatuses']:
             raise StatusNotAllowed(copy.offer_name, offer.fields['Status'])

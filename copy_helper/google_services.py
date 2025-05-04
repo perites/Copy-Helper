@@ -1,5 +1,5 @@
+import json
 import logging
-import os
 from io import BytesIO
 
 from docx import Document
@@ -8,7 +8,7 @@ from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 
-from . import paths
+from . import secrets
 
 
 class ServicesHelper:
@@ -33,10 +33,8 @@ class ServicesHelper:
 
         scopes = ['https://www.googleapis.com/auth/drive', 'https://www.googleapis.com/auth/spreadsheets.readonly']
 
-        path_to_credentials = paths.PATH_TO_FOLDER_SYSTEM_DATA + 'services_token.json'
-
-        if os.path.exists(path_to_credentials):
-            creds = Credentials.from_authorized_user_file(path_to_credentials, scopes)
+        if secrets.CREDENTIALS:
+            creds = Credentials.from_authorized_user_info(secrets.CREDENTIALS, scopes)
 
         if creds:
             if creds.valid:
@@ -44,15 +42,14 @@ class ServicesHelper:
 
             elif creds.expired and creds.refresh_token:
                 creds.refresh(Request())
-                with open(path_to_credentials, 'w', encoding='utf-8') as file:
-                    file.write(creds.to_json())
+
+                secrets.update_credentials(json.loads(creds.to_json()))
                 return creds
 
-        flow = InstalledAppFlow.from_client_secrets_file(paths.PATH_TO_FILE_OAUTH, scopes)
+        flow = InstalledAppFlow.from_client_config(secrets.OAUTH_CLIENT, scopes)
         creds = flow.run_local_server(port=0)
 
-        with open(path_to_credentials, 'w', encoding='utf-8') as file:
-            file.write(creds.to_json())
+        secrets.update_credentials(json.loads(creds.to_json()))
 
         return creds
 

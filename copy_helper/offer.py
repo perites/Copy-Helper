@@ -1,28 +1,28 @@
+import json
 import logging
 import time
 
 import requests
 
 from . import google_services
-from . import paths
-from . import tools
 
 MAX_CACHE_DURATION_SECONDS = 60 * 60 * 6
+PATH_TO_FILE_OFFERS_CACHE = 'copy_helper/offers_info_cache.json'
 
 
 class OffersCache:
 
-    @staticmethod
-    def get_cache():
+    @classmethod
+    def get_cache(cls):
         logging.debug('Getting all offers info cache')
-        offers_info_cache = tools.read_json_file(paths.PATH_TO_FILE_OFFERS_CACHE)
+        offers_info_cache = cls.read_json_file(PATH_TO_FILE_OFFERS_CACHE)
 
         return offers_info_cache
 
-    @staticmethod
-    def set_cache(new_offers_info_cache):
+    @classmethod
+    def set_cache(cls, new_offers_info_cache):
         logging.debug('Setting new offers info cache')
-        tools.write_json_file(paths.PATH_TO_FILE_OFFERS_CACHE, new_offers_info_cache)
+        cls.write_json_file(PATH_TO_FILE_OFFERS_CACHE, new_offers_info_cache)
 
     @classmethod
     def set_offer_cache(cls, offer_info):
@@ -49,6 +49,18 @@ class OffersCache:
                 del all_cache[option]
                 cls.set_cache(all_cache)
                 logging.info(f'Cache for offer {option} cleared')
+
+    @staticmethod
+    def read_json_file(path):
+        logging.debug(f'Reading json file {path}')
+        with open(path, 'r', encoding="utf-8") as file:
+            return json.load(file)
+
+    @staticmethod
+    def write_json_file(path, data):
+        logging.debug(f'Writing to {path}')
+        with open(path, 'w') as file:
+            json.dump(data, file, indent=4)
 
 
 # class OffersCache:
