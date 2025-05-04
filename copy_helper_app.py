@@ -2,9 +2,29 @@ import datetime
 import json
 import logging
 import os
+import shutil
 import traceback
 
+import requests
+from PIL import Image
+
 import logger
+
+if not os.path.exists('GeneralSettings.json'):
+    open('GeneralSettings.json', 'w').write(json.dumps(
+        {
+            "ResultsDirectory": "",
+            "ResultsDirectoryType": "",
+            "ImagesDirectory": "",
+            "SaveImages": False
+        }
+    ))
+    logging.error('Fill general settings!')
+    exit()
+
+SETTINGS = json.load(open('GeneralSettings.json'))
+
+os.makedirs('Domains', exist_ok=True)
 
 
 def cinput():
@@ -12,177 +32,233 @@ def cinput():
     return input(prefix).strip()
 
 
-def get_added_domains(path_to_domains):
-    added_domains = []
-    domain_folders_names = [entry.name for entry in os.scandir(path_to_domains) if entry.is_dir()]
+def get_copy_result(copy):
+    html_r = '+' if copy.html_found else '-'
+    sl_r = '+' if copy.lift_sls else '-'
+    pfooter_r = '+' if copy.priority_info['unsub_text'] else '-'
+    link_r = '+' if 'UNKNOWN_TYPE' not in copy.tracking_link else '-'
+    result = f'{copy.str_rep} : html {html_r} | sl {sl_r} | pfooter {pfooter_r} | link {link_r} | img {len(copy.lift_images)}'
 
-    for domain_folder_name in domain_folders_names:
-        abr_found = False
-        for domain_abr, domain_full_name in copy_helper.settings.GeneralSettings.domains_short_names.items():
-            if domain_folder_name == domain_full_name:
-                added_domains.append(domain_abr + f' ({domain_folder_name})')
-                abr_found = True
-                break
-
-        if not abr_found:
-            added_domains.append(domain_folder_name)
-
-    return added_domains
+    return result
 
 
-def get_domain_name(domain_identifier):
-    domain_name = copy_helper.settings.GeneralSettings.domains_short_names.get(domain_identifier)
+def get_domain_result_path(domain_name, date):
+    match SETTINGS['ResultsDirectoryType']:
+        case 'Domain-Date':
+            path_to_domain_results = SETTINGS['ResultsDirectory'] + f'{domain_name}/{date}/'
 
-    if domain_name:
-        return domain_name
+        case 'Date-Domain':
+            path_to_domain_results = SETTINGS['ResultsDirectory'] + f'{date}/{domain_name}/'
+
+        case _:
+            logging.warning('Unknown type of result directory type, using default')
+            path_to_domain_results = SETTINGS['ResultsDirectory'] + f'{date}/{domain_name}/'
+
+    os.makedirs(path_to_domain_results, exist_ok=True)
+    return path_to_domain_results
+
+
+def save_lift_file(copy, path_to_domain_results):
+    file_name = copy.str_rep + ('-Priority' if copy.priority_info['is_priority'] else '')
+    path = path_to_domain_results + f'{file_name}.html'
+    with open(path, 'w', encoding='utf-8') as file:
+        file.write(copy.lift_html)
+        logging.debug(f'Successfully saved lift file for {copy.str_rep}')
+
+
+def save_image(image_file_name, image_url, date):
+    try:
+        save_image_path = SETTINGS['ImagesDirectory'] + f'{date}/'
+
+        if not os.path.exists(save_image_path):
+            os.makedirs(save_image_path)
+
+        temp_full_image_path = save_image_path + image_file_name
+
+        with os.scandir(save_image_path) as entries:
+            for entry in entries:
+                if entry.is_file() and image_file_name in entry.name:
+                    logging.debug(f'Not saving {image_file_name} - image already saved')
+                    return
+
+        logging.debug(f'Saving {image_file_name} to {save_image_path}')
+
+        with open(temp_full_image_path, 'wb') as file:
+            response = requests.get(image_url, stream=True)
+            if not response.ok:
+                logging.warning(
+                    f'Error while saving image {image_file_name}. Request status code {response.status_code}')
+
+                return
+
+            for chunk in response.iter_content(512):
+                file.write(chunk)
+
+        img = Image.open(temp_full_image_path)
+        ext = img.format.lower()
+        img.close()
+
+        new_full_image_path = temp_full_image_path + f'.{ext}'
+
+        os.rename(temp_full_image_path, new_full_image_path)
+
+    except Exception as e:
+        logging.error(f'Error while saving image {image_file_name}. Details : {e}')
+        logging.debug(traceback.format_exc())
+
+
+def save_sl_file(copy, domain_name, date, path_to_domain_results):
+    path_to_sls_file = path_to_domain_results + f'SLs-{domain_name}-{date}.txt'
+
+    if os.path.exists(path_to_sls_file):
+        with open(path_to_sls_file, 'r', encoding='utf-8') as file:
+            sls_file_content = file.read()
+            if copy.str_rep in sls_file_content:
+                logging.info(f'Did not add sls for {copy.str_rep} in SLs.txt file as already has them')
+                return
+
+    if copy.priority_info['is_priority']:
+        unsub_url_str = f'Unsub link:\n{copy.priority_info['unsub_link']}\n\n'
+        suffix = '-Priority'
 
     else:
-        logging.debug(f'Did not found abbreviate {domain_identifier} in settings')
-        return domain_identifier
+        unsub_url_str, suffix = '', ''
 
+    copy_sls = (
+            copy.str_rep + suffix + '\n\n' +
 
-def get_domain(domain_identifier):
-    domain_name = get_domain_name(domain_identifier)
-    try:
-        domain = copy_helper.domain.Domain(domain_name)
-        return domain
-    except FileNotFoundError:
-        logging.info(
-            f'Cant find domain {domain_identifier}, ensure that you entering name correctly and {domain_name} in Settings/Domains')
-        return
+            f'Tracking link:\n{copy.tracking_link}\n\n' + unsub_url_str +
 
+            'Sls:\n' +
 
-def get_str_copies(domain, date):
-    str_copies = domain.get_copies(date)
-    if not str_copies:
-        logging.info(
-            'Copies were not found, you can enter them manually (separated by space as in brodcast) or just press enter to return to begining')
-        str_copies = cinput().split(' ')
+            copy.lift_sls +
 
-    return str_copies
+            "\n----------------------------------------\n\n\n\n")
+
+    with open(path_to_sls_file, 'a', encoding='utf-8') as file:
+        file.write(copy_sls)
+        logging.info(f'Successfully add sls for {copy.str_rep} in SLs.txt')
 
 
 def main_cycle():
-    domain_dict = json.load(open('Settings/Domains/WorldFinReport.com/settings.json'))
-    domain_dict['styles']['template'] = open('Settings/Domains/WorldFinReport.com/template.html').read()
-    domain = copy_helper.domain.Domain(domain_dict)
-    str_copies = domain.get_copies_from_broadcast('2/20')
-    copies = [domain.create_copy(str_copy) for str_copy in str_copies]
-    for copy in copies:
-        copy = domain.find_copy(copy)
-        copy = domain.make_tracking_link(copy)
-        copy = domain.make_unsub_link(copy)
-
-        copy = copy_helper.image_helper.ImageHelper.process_images(copy, domain.styles['imageBlock'])
-
-        styles_helper = copy_helper.styles_helper.StylesHelper(domain.styles)
-        copy = styles_helper.apply_styles(copy)
-        copy = styles_helper.add_template(copy)
-        copy.lift_html = copy.lift_html.replace('urlhere', copy.tracking_link)
-        print(copy.lift_html)
-        print(copy.lift_sls)
-        print(copy.lift_images)
-    exit()
-
     logging.info('Type what you want to do:')
-    logging.info('make-domain (md) | apply-styles | add-domain | clear-cache | exit')
+    logging.info('make-domain (md) | apply-styles (as) | clear-cache (cc) | add-domain | exit')
     action = cinput()
     match action:
         case 'exit':
             exit()
 
-        case 'clear-cache':
-            logging.info(
-                'Please specify clear all cache or specific offer, note that cache auto refreshes every 6 hours')
+        case 'clear-cache' | 'cc':
+            logging.info('Specify offer to clear cache')
             option = cinput()
             copy_helper.offer.OffersCache.clear_cache(option)
 
-        case 'add-domain':
-            logging.info('To create new domain enter name it below. Name should be same as in broadcast')
-            domain_name = cinput()
-            copy_helper.create_new_domain(domain_name)
-
         case 'make-domain' | 'md':
+            logging.info('To make domain, enter <domain-name> <date>')
+            logging.info(f'Added domains : {', '.join(DOMAINS.keys())}')
 
-            logging.info(
-                'To make domain, enter <domain-name> <date>(same as column in broadcast)')
+            user_input = cinput().split(' ')
 
-            added_domains = get_added_domains(copy_helper.paths.PATH_TO_FOLDER_DOMAINS_SETTINGS)
-            logging.info(f'Added domains : {', '.join(added_domains)}')
+            domain_name, broadcast_date = user_input[0], user_input[1]
 
-            domain_name_date_str = cinput().split(' ')
-            if len(domain_name_date_str) != 2:
+            domain = DOMAINS.get(domain_name)
+            if not domain:
+                return
+
+            if len(user_input) == 2:
+                str_copies = domain.get_copies_from_broadcast(broadcast_date)
+                if not str_copies:
+                    logging.info('Copies were not found, you can enter them manually (separated by space)')
+                    str_copies = cinput().split(' ')
+
+            elif len(user_input) > 2:
+                str_copies = user_input[2:]
+
+            else:
                 logging.warning('Wrong input')
                 return
 
-            domain_name, broadcast_date = domain_name_date_str[0], domain_name_date_str[1]
+            path_to_domain_results = get_domain_result_path(domain.broadcast['name'], broadcast_date.replace('/', '.'))
 
-            domain = get_domain(domain_name)
-            if not domain:
-                return
-
-            str_copies = get_str_copies(domain, broadcast_date)
-            if not str_copies:
-                return
+            copies = [domain.create_copy(str_copy) for str_copy in str_copies]
 
             copies_results = []
-            for str_copy in str_copies:
+            for copy in copies:
                 try:
-                    copy_maker = copy_helper.copy_maker.CopyMaker(domain, str_copy, broadcast_date.replace('/', '.'))
-                    results = copy_maker.make_copy()
-                    copies_results.append(results)
-                except copy_helper.copy_maker.CopyMakerException as e:
-                    logging.error(
-                        f'Error while making copy {str_copy} for domain {domain.name} for date {broadcast_date}. Details : {e}')
+                    copy = domain.find_copy(copy)
+                    if not copy.lift_html:
+                        file_name = copy.str_rep + ('-Priority' if copy.priority_info['is_priority'] else '')
+                        path = path_to_domain_results + f'{file_name}.html'
+                        if os.path.exists(path):
+                            copy.lift_html = open(path, 'r', encoding='utf-8').read()
 
-                except copy_helper.offer.OfferException as e:
-                    logging.error(f'Error with offer {e.offer_name}. Details : {e}')
+                    copy = domain.make_tracking_link(copy)
+                    copy = domain.make_unsub_link(copy)
+                    copy = domain.process_images(copy)
+
+                    styles_helper = copy_helper.styles_helper.StylesHelper(domain.styles)
+                    copy = styles_helper.apply_styles(copy)
+                    copy = styles_helper.add_template(copy)
+
+                    copy.lift_html = copy.lift_html.replace('urlhere', copy.tracking_link)
+
+                    copies_results.append(get_copy_result(copy))
+
+                    save_lift_file(copy, path_to_domain_results)
+                    save_sl_file(copy, domain_name, broadcast_date.replace('/', '.'), path_to_domain_results)
+
+                    if SETTINGS['SaveImages']:
+                        for index, image_url in enumerate(copy.lift_images):
+                            save_image(f'{copy.str_rep}-image-{index + 1}', image_url, broadcast_date.replace('/', '.'))
 
                 except Exception as e:
-                    logging.error(f'Unknown error while making copy {str_copy}. Details : {e}')
+                    logging.error(f'Error while making copy {copy.str_rep}. Details : {e}')
                     logging.debug(traceback.format_exc())
 
-            logging.info(f'Finished making domain {domain.name} for date {broadcast_date}')
+            logging.info(f'Finished making domain {domain_name} for date {broadcast_date}')
             for results in copies_results:
-                logging.info(str(results))
+                logging.info(results)
 
             logging.info('======================')
 
-        case 'apply-styles':
-            logging.info(
-                'To apply styles of domain to already saving copy, enter <domain-name> <date>(same as column in broadcast) <COPY>(copy that already saved in result directory)')
-
-            domain_name, broadcast_date, str_copy = cinput().split(' ')
-            domain = get_domain(domain_name)
-            if not domain:
+        case 'add-domain':
+            logging.info('Enter new domain name')
+            domain_name = cinput()
+            if not domain_name:
+                logging.warning('Domain Name cant be empty')
+                return
+            logging.info('Creating new Domain')
+            domain_folder_path = 'Domains/' + f'{domain_name}/'
+            try:
+                os.makedirs(domain_folder_path)
+            except FileExistsError:
+                logging.warning('Domain must have unique name')
                 return
 
-            try:
-                copy_maker = copy_helper.copy_maker.CopyMaker(domain, str_copy, broadcast_date.replace('/', '.'))
-                results = copy_maker.make_copy(set_content_from_local=True)
-                logging.info(str(results))
-            except copy_helper.copy_maker.CopyMakerException as e:
-                logging.error(
-                    f'Error while making copy {str_copy} for domain {domain.name} for date {broadcast_date}. Details : {e}')
-
-            except copy_helper.offer.OfferException as e:
-                logging.error(f'Error with offer {e.offer_name}. Details : {e}')
-
-            except Exception as e:
-                logging.error(f'Unknown error while making copy {str_copy}. Details : {e}')
-                logging.debug(traceback.format_exc())
-
-            logging.info(f'Finished making copy {str_copy} for domain {domain.name}')
-            logging.info('======================')
+            shutil.copy('Domains/DefaultDomain/settings.json', domain_folder_path)
+            shutil.copy('Domains/DefaultDomain/template.html', domain_folder_path)
 
 
 if __name__ == "__main__":
     logging.root = logger.logger
     import copy_helper
 
-    logger.configure_console_logger(copy_helper.settings.GeneralSettings.logging_level)
+    logging.info('Welcome to copy-helper')
+    logging.info('Loading...')
 
-    logging.info('Welcome to copy-helper test')
+    domains_folder = 'Domains/'
+    DOMAINS = {}
+    for name in os.listdir(domains_folder):
+        if name == 'DefaultDomain':
+            continue
+
+        full_path = os.path.join(domains_folder, name)
+        if os.path.isdir(full_path):
+            domain_dict = json.load(open(full_path + '/settings.json'))
+            domain_dict['styles']['template'] = open(full_path + '/template.html').read()
+            domain = copy_helper.domain.Domain(domain_dict)
+
+            DOMAINS[name] = domain
 
     while True:
         try:
@@ -191,4 +267,3 @@ if __name__ == "__main__":
             logging.critical(f'Got Unexpected Error! Details : {e}')
             logging.debug(traceback.format_exc())
             logging.info('Returning to main page')
-            exit()

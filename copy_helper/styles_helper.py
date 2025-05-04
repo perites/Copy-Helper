@@ -207,7 +207,7 @@ class StylesHelper:
                                                            copy.priority_info['unsub_link'])
 
             priority_block = self.styles_settings['priorityBlock'].replace('[PRIORITY_BODY]', priority_body)
-            template = template.replace('[PRIORITY_FOOTER_HERE]', priority_block)
+
         else:
             priority_block = ''
 
@@ -215,6 +215,7 @@ class StylesHelper:
             return copy.lift_html + '<br><br><br><br><br>' + priority_block
 
         template = template.replace('[COPY_HERE]', copy.lift_html)
+        template = template.replace('[PRIORITY_FOOTER_HERE]', priority_block)
 
         copy.lift_html = template
 

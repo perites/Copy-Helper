@@ -222,7 +222,7 @@ class Offer:
 
                 maybe_google_drive_folder_id = google_services.GoogleDrive.get_folder_by_name('HTML+SL',
                                                                                               raw_google_drive_folder_id,
-                                                                                              strict=False)
+                                                                                              strict=False)['id']
                 if maybe_google_drive_folder_id:
                     google_drive_folder_id = maybe_google_drive_folder_id
                 else:
@@ -230,7 +230,7 @@ class Offer:
                     google_drive_folder_id = self.find_offer_folder_manually(partners_folder_id)
             else:
                 google_drive_folder_id = raw_google_drive_folder_id
-        offer_monday_fields['Copy Location'] = 'https://drive.google.com/drive/folders/' + google_drive_folder_id['id']
+        offer_monday_fields['Copy Location'] = 'https://drive.google.com/drive/folders/' + google_drive_folder_id
         return offer_monday_fields
 
     def find_offer_folder_manually(self, partners_folder_id):

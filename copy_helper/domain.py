@@ -50,6 +50,7 @@ class Copy:
     offer_monday_fields = {}
     priority_info = {}
     lift_html = ''
+    html_found = False
     lift_sls = ''
     lift_images = []
 
@@ -114,6 +115,8 @@ class Domain:
         copy.offer_monday_fields = offer.fields
         copy.priority_info = offer_priority_info
         copy.lift_html = lift_html
+        if copy.lift_html:
+            copy.html_found = True
         copy.lift_sls = lift_sls
 
         return copy
@@ -148,6 +151,33 @@ class Domain:
         unsub_link = link_template.replace('[UNSUB_ID]', copy.priority_info['unsub_id'])
         copy.priority_info['unsub_link'] = unsub_link
 
+        return copy
+
+    def process_images(self, copy):
+        src_part_pattern = r'src="[^"]*'
+        images_urls = []
+        src_list = re.findall(src_part_pattern, copy.lift_html)
+        if len(src_list) == 0:
+            if copy.img_code:
+                logging.info('Copy has img code and doesnt contain images')
+                logging.debug(f'Adding image block to copy {copy.str_rep}')
+                copy.lift_html = copy.lift_html.replace('<br><br>',
+                                                        f'<!-- image-block-start -->{self.styles['imageBlock']}<!-- image-block-end -->',
+                                                        1)
+
+                return copy
+
+            else:
+                logging.debug('No images no image code, doing nothing')
+                return copy
+
+        logging.info(f'Found {len(src_list)} images')
+        for index, src_part in enumerate(src_list):
+            img_url = src_part.split('"')[1]
+            if img_url not in images_urls:
+                images_urls.append(img_url)
+
+        copy.lift_images = images_urls
         return copy
 
 

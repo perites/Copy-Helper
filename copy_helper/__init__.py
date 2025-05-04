@@ -1,19 +1,19 @@
-from . import copy_maker
-from . import domain
-from . import image_helper
-from . import offer
-from . import settings
-from . import styles_helper
-from .paths import create_new_domain
+import json
+import logging
+import os
 
-a = {
-    'copy': {
-        'str_copy': 'MPPS...',
-        'html': '<dir> ...',
-        'sl': '1. trump is ...',
-        'images': ['image1.jps', ],
-        'tracking_link': 'https/...',
-        'unsub_link': 'https/...',
-        'unsub_text': 'if you no longer...'
-    },
-}
+from . import domain
+from . import offer
+from . import styles_helper
+
+if not os.path.exists('copy_helper/offers_info_cache.json'):
+    open('copy_helper/offers_info_cache.json', 'w').write('{}')
+
+if not os.path.exists('copy_helper/secrets.json'):
+    open('copy_helper/secrets.json', 'w').write(json.dumps({
+        "MONDAY_TOKEN": "",
+        "OAUTH_CLIENT": ""
+    }))
+
+    logging.warning('Fill secrets file!')
+    exit()
