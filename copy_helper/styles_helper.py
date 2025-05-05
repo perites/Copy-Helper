@@ -40,7 +40,7 @@ class StylesHelper:
         if self.styles_settings['upperDownCopyPadding']:
             upper_down_copy_padding = self.calculate_value(self.styles_settings['upperDownCopyPadding'])
 
-            copy.lift_html, success = self.replace_style(r'padding\s*:\s*(10|20)px\s+0px',
+            copy.lift_html, success = self.replace_style(r'padding\s*:\s*(10|20)px\s+0(px|)',
                                                          f'padding:{upper_down_copy_padding} 0', copy.lift_html)
 
         if self.styles_settings['lineHeight']:
@@ -91,7 +91,7 @@ class StylesHelper:
 
         for old_a_tag in re.findall(a_tag_pattern, html_copy):
             new_a_tag = cls.change_link_color(link_color, old_a_tag)
-            html_copy = html_copy.replace(old_a_tag, new_a_tag)
+            html_copy = html_copy.replace(old_a_tag, new_a_tag, 1)
 
         return html_copy
 
@@ -100,7 +100,7 @@ class StylesHelper:
         link_style = re.findall(r'style\s*=\s*"([^"]*)"', a_tag)
         if link_style:
             old_link_style = link_style[0]
-            new_link_style, success = cls.replace_style(r'(?<![-\w])color\s*:\s*([^;"]+)', f'color: {link_color};',
+            new_link_style, success = cls.replace_style(r'(?<![-\w])color\s*:\s*([^;"]+)', f'color: {link_color}',
                                                         old_link_style)
 
             if not success:

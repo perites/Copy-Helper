@@ -183,10 +183,13 @@ def main_cycle():
             copies = [domain.create_copy(str_copy) for str_copy in str_copies]
 
             copies_results = []
+
+            logging.info(f'Processing copies : {", ".join(str_copies)}')
             for copy in copies:
                 try:
                     copy = domain.find_copy(copy)
                     if not copy.lift_html:
+                        logging.info(f'Html was not found for {copy.str_rep}, trying to read from local file')
                         file_name = copy.str_rep + ('-Priority' if copy.priority_info['is_priority'] else '')
                         path = path_to_domain_results + f'{file_name}.html'
                         if os.path.exists(path):

@@ -98,9 +98,9 @@ class Domain:
 
         match self.products['trackingLink']['endType']:
             case 'IMG-IT':
-                link_end = copy.offer_monday_fields['IMG-IT'] + copy.lift_number + copy.img_code
+                link_end = copy.offer_monday_fields['IMG-IT'] + '_' + copy.lift_number + copy.img_code
             case 'IMG-IT-NUM':
-                link_end = copy.offer_monday_fields['IMG-IT'][3:] + copy.lift_number + copy.img_code
+                link_end = copy.offer_monday_fields['IMG-IT'][3:] + '_' + copy.lift_number + copy.img_code
             case _:
                 link_end = copy.str_rep
 
