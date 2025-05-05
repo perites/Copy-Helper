@@ -32,6 +32,10 @@ def cinput():
     return input(prefix).strip()
 
 
+def clear_console():
+    os.system('cls' if os.name == 'nt' else 'clear')
+
+
 def get_copy_result(copy):
     html_r = '+' if copy.html_found else '-'
     sl_r = '+' if copy.lift_sls else '-'
@@ -142,13 +146,33 @@ def save_sl_file(copy, domain_name, date, path_to_domain_results):
 
 def main_cycle():
     logging.info('Type what you want to do:')
-    logging.info('make-domain (md) | apply-styles (as) | clear-cache (cc) | add-domain | exit')
+    logging.info('make-domain (md) | clear-cache | add-domain | clear | exit')
     action = cinput()
     match action:
         case 'exit':
             exit()
 
-        case 'clear-cache' | 'cc':
+        case 'clear':
+            clear_console()
+
+        case 'add-domain':
+            logging.info('Enter new domain name')
+            domain_name = cinput()
+            if not domain_name:
+                logging.warning('Domain Name cant be empty')
+                return
+            logging.info('Creating new Domain')
+            domain_folder_path = 'Domains/' + f'{domain_name}/'
+            try:
+                os.makedirs(domain_folder_path)
+            except FileExistsError:
+                logging.warning('Domain must have unique name')
+                return
+
+            shutil.copy('Domains/DefaultDomain/settings.json', domain_folder_path)
+            shutil.copy('Domains/DefaultDomain/template.html', domain_folder_path)
+
+        case 'clear-cache':
             logging.info('Specify offer to clear cache')
             option = cinput()
             copy_helper.offer.OffersCache.clear_cache(option)
@@ -218,34 +242,20 @@ def main_cycle():
                     logging.error(f'Error while making copy {copy.str_rep}. Details : {e}')
                     logging.debug(traceback.format_exc())
 
+            logging.info('======================')
+
             logging.info(f'Finished making domain {domain_name} for date {broadcast_date}')
             for results in copies_results:
                 logging.info(results)
 
             logging.info('======================')
 
-        case 'add-domain':
-            logging.info('Enter new domain name')
-            domain_name = cinput()
-            if not domain_name:
-                logging.warning('Domain Name cant be empty')
-                return
-            logging.info('Creating new Domain')
-            domain_folder_path = 'Domains/' + f'{domain_name}/'
-            try:
-                os.makedirs(domain_folder_path)
-            except FileExistsError:
-                logging.warning('Domain must have unique name')
-                return
-
-            shutil.copy('Domains/DefaultDomain/settings.json', domain_folder_path)
-            shutil.copy('Domains/DefaultDomain/template.html', domain_folder_path)
-
 
 if __name__ == "__main__":
     logging.root = logger.logger
     import copy_helper
 
+    clear_console()
     logging.info('Welcome to copy-helper')
     logging.info('Loading...')
 
