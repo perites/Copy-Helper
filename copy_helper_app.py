@@ -33,7 +33,7 @@ def cinput():
 
 
 def clear_console():
-    os.system('cls' if os.name == 'nt' else 'clear')
+    print("\033[H\033[J\033[3J", end="")
 
 
 def get_copy_result(copy):
@@ -181,7 +181,7 @@ def main_cycle():
             logging.info('To make domain, enter <domain-name> <date>')
             logging.info(f'Added domains : {', '.join(DOMAINS.keys())}')
 
-            user_input = cinput().split(' ')
+            user_input = cinput().strip().split(' ')
 
             domain_name, broadcast_date = user_input[0], user_input[1]
 
@@ -204,11 +204,14 @@ def main_cycle():
 
             path_to_domain_results = get_domain_result_path(domain.broadcast['name'], broadcast_date.replace('/', '.'))
 
-            copies = [domain.create_copy(str_copy) for str_copy in str_copies]
+            copies = []
+            for str_copy in str_copies:
+                if str_copy:
+                    copies.append(domain.create_copy(str_copy.strip()))
 
             copies_results = []
 
-            logging.info(f'Processing copies : {", ".join(str_copies)}')
+            logging.info(f'Processing copies : {", ".join([copy.str_rep for copy in copies])}')
             for copy in copies:
                 try:
                     copy = domain.find_copy(copy)
@@ -232,7 +235,8 @@ def main_cycle():
                     copies_results.append(get_copy_result(copy))
 
                     save_lift_file(copy, path_to_domain_results)
-                    save_sl_file(copy, domain_name, broadcast_date.replace('/', '.'), path_to_domain_results)
+                    save_sl_file(copy, domain.broadcast['name'], broadcast_date.replace('/', '.'),
+                                 path_to_domain_results)
 
                     if SETTINGS['SaveImages']:
                         for index, image_url in enumerate(copy.lift_images):
