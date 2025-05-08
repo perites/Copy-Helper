@@ -3,6 +3,8 @@ import json
 import logging
 import os
 import shutil
+import sys
+import time
 import traceback
 
 import requests
@@ -36,12 +38,12 @@ def clear_console():
     print("\033[H\033[J\033[3J", end="")
 
 
-def get_copy_result(copy):
+def get_copy_result(copy, max_len_str_copy):
     html_r = '+' if copy.html_found else '-'
     sl_r = '+' if copy.lift_sls else '-'
     pfooter_r = '+' if copy.priority_info['unsub_text'] else '-'
     link_r = '+' if 'UNKNOWN_TYPE' not in copy.tracking_link else '-'
-    result = f'{copy.str_rep} : html {html_r} | sl {sl_r} | pfooter {pfooter_r} | link {link_r} | img {len(copy.lift_images)}'
+    result = f'{copy.str_rep + (' ' * ((max_len_str_copy) - len(copy.str_rep)))} : html {html_r} | sl {sl_r} | pfooter {pfooter_r} | link {link_r} | img {len(copy.lift_images)}'
 
     return result
 
@@ -144,13 +146,22 @@ def save_sl_file(copy, domain_name, date, path_to_domain_results):
         logging.info(f'Successfully add sls for {copy.str_rep} in SLs.txt')
 
 
+def restart_script():
+    logging.info("Restarting...")
+    time.sleep(1)
+    os.execl(sys.executable, sys.executable, *sys.argv)
+
+
 def main_cycle():
     logging.info('Type what you want to do:')
-    logging.info('make-domain (md) | clear-cache | add-domain | clear | exit')
+    logging.info('make-domain (md) | clear-cache | add-domain | clear | restart | exit')
     action = cinput()
     match action:
         case 'exit':
             exit()
+
+        case 'restart':
+            restart_script()
 
         case 'clear':
             clear_console()
@@ -179,7 +190,7 @@ def main_cycle():
 
         case 'make-domain' | 'md':
             logging.info('To make domain, enter <domain-name> <date>')
-            logging.info(f'Added domains : {', '.join(DOMAINS.keys())}')
+            logging.info(f'Added domains : {', '.join(sorted(DOMAINS.keys()))}')
 
             user_input = cinput().strip().split(' ')
 
@@ -205,8 +216,11 @@ def main_cycle():
             path_to_domain_results = get_domain_result_path(domain.broadcast['name'], broadcast_date.replace('/', '.'))
 
             copies = []
+            max_len_str_copy = 0
             for str_copy in str_copies:
                 if str_copy:
+                    if (len_str_copy := len(str_copy)) > max_len_str_copy:
+                        max_len_str_copy = len_str_copy
                     copies.append(domain.create_copy(str_copy.strip()))
 
             copies_results = []
@@ -232,7 +246,7 @@ def main_cycle():
 
                     copy.lift_html = copy.lift_html.replace('urlhere', copy.tracking_link)
 
-                    copies_results.append(get_copy_result(copy))
+                    copies_results.append(get_copy_result(copy, max_len_str_copy))
 
                     save_lift_file(copy, path_to_domain_results)
                     save_sl_file(copy, domain.broadcast['name'], broadcast_date.replace('/', '.'),
