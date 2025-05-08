@@ -38,12 +38,18 @@ def clear_console():
     print("\033[H\033[J\033[3J", end="")
 
 
+def restart_script():
+    logging.info("Restarting...")
+    time.sleep(1)
+    os.execl(sys.executable, sys.executable, *sys.argv)
+
+
 def get_copy_result(copy, max_len_str_copy):
     html_r = '+' if copy.html_found else '-'
     sl_r = '+' if copy.lift_sls else '-'
     pfooter_r = '+' if copy.priority_info['unsub_text'] else '-'
     link_r = '+' if 'UNKNOWN_TYPE' not in copy.tracking_link else '-'
-    result = f'{copy.str_rep + (' ' * ((max_len_str_copy) - len(copy.str_rep)))} : html {html_r} | sl {sl_r} | pfooter {pfooter_r} | link {link_r} | img {len(copy.lift_images)}'
+    result = f'{copy.str_rep + (' ' * (max_len_str_copy - len(copy.str_rep)))} : html {html_r} | sl {sl_r} | pfooter {pfooter_r} | link {link_r} | img {len(copy.lift_images)}'
 
     return result
 
@@ -70,6 +76,39 @@ def save_lift_file(copy, path_to_domain_results):
     with open(path, 'w', encoding='utf-8') as file:
         file.write(copy.lift_html)
         logging.debug(f'Successfully saved lift file for {copy.str_rep}')
+
+
+def save_sl_file(copy, domain_name, date, path_to_domain_results):
+    path_to_sls_file = path_to_domain_results + f'SLs-{domain_name}-{date}.txt'
+
+    if os.path.exists(path_to_sls_file):
+        with open(path_to_sls_file, 'r', encoding='utf-8') as file:
+            sls_file_content = file.read()
+            if copy.str_rep in sls_file_content:
+                logging.info(f'Did not add sls for {copy.str_rep} in SLs.txt file as already has them')
+                return
+
+    if copy.priority_info['is_priority']:
+        unsub_url_str = f'Unsub link:\n{copy.priority_info['unsub_link']}\n\n'
+        suffix = '-Priority'
+
+    else:
+        unsub_url_str, suffix = '', ''
+
+    copy_sls = (
+            copy.str_rep + suffix + '\n\n' +
+
+            f'Tracking link:\n{copy.tracking_link}\n\n' + unsub_url_str +
+
+            'Sls:\n' +
+
+            copy.lift_sls +
+
+            "\n----------------------------------------\n\n\n\n")
+
+    with open(path_to_sls_file, 'a', encoding='utf-8') as file:
+        file.write(copy_sls)
+        logging.info(f'Successfully add sls for {copy.str_rep} in SLs.txt')
 
 
 def save_image(image_file_name, image_url, date):
@@ -111,45 +150,6 @@ def save_image(image_file_name, image_url, date):
     except Exception as e:
         logging.error(f'Error while saving image {image_file_name}. Details : {e}')
         logging.debug(traceback.format_exc())
-
-
-def save_sl_file(copy, domain_name, date, path_to_domain_results):
-    path_to_sls_file = path_to_domain_results + f'SLs-{domain_name}-{date}.txt'
-
-    if os.path.exists(path_to_sls_file):
-        with open(path_to_sls_file, 'r', encoding='utf-8') as file:
-            sls_file_content = file.read()
-            if copy.str_rep in sls_file_content:
-                logging.info(f'Did not add sls for {copy.str_rep} in SLs.txt file as already has them')
-                return
-
-    if copy.priority_info['is_priority']:
-        unsub_url_str = f'Unsub link:\n{copy.priority_info['unsub_link']}\n\n'
-        suffix = '-Priority'
-
-    else:
-        unsub_url_str, suffix = '', ''
-
-    copy_sls = (
-            copy.str_rep + suffix + '\n\n' +
-
-            f'Tracking link:\n{copy.tracking_link}\n\n' + unsub_url_str +
-
-            'Sls:\n' +
-
-            copy.lift_sls +
-
-            "\n----------------------------------------\n\n\n\n")
-
-    with open(path_to_sls_file, 'a', encoding='utf-8') as file:
-        file.write(copy_sls)
-        logging.info(f'Successfully add sls for {copy.str_rep} in SLs.txt')
-
-
-def restart_script():
-    logging.info("Restarting...")
-    time.sleep(1)
-    os.execl(sys.executable, sys.executable, *sys.argv)
 
 
 def main_cycle():
