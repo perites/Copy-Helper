@@ -99,12 +99,12 @@ class StylesHelper:
     def change_link_color(cls, link_color, a_tag):
         link_style = re.findall(r'style\s*=\s*"([^"]*)"', a_tag)
         if link_style:
-
+            old_link_style = link_style[0]
+            
             if 'background-color' in old_link_style:
                 logging.debug('Button detected, not changing color')
                 return a_tag
-
-            old_link_style = link_style[0]
+                
             new_link_style, success = cls.replace_style(r'(?<![-\w])color\s*:\s*([^;"]+)', f'color: {link_color}',
                                                         old_link_style)
 
