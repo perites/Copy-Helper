@@ -24,9 +24,14 @@ if not os.path.exists('GeneralSettings.json'):
     logging.error('Fill general settings!')
     exit()
 
-SETTINGS = json.load(open('GeneralSettings.json'))
+if not os.path.exists('custom_sls.json'):
+    open('custom_sls.json', 'w').write('{}')
+    logging.debug('Custom sls file created')
 
+SETTINGS = json.load(open('GeneralSettings.json'))
+CUSTOM_SLS = json.load(open('custom_sls.json'))
 os.makedirs('Domains', exist_ok=True)
+os.makedirs('Images', exist_ok=True)
 
 
 def cinput():
@@ -95,14 +100,29 @@ def save_sl_file(copy, domain_name, date, path_to_domain_results):
     else:
         unsub_url_str, suffix = '', ''
 
+    if copy.custom_sls:
+        custom_sls_block = '''Custom SLs:\n'''
+        for lift_custom_sls, custom_sls in copy.custom_sls.items():
+            custom_sls_block += f'''
+{lift_custom_sls} 
+SL : {custom_sls['SL']}
+SN : {custom_sls['SN']}
+
+'''
+        custom_sls_block += '\n'
+    else:
+        custom_sls_block = ''
+
     copy_sls = (
             copy.str_rep + suffix + '\n\n' +
 
-            f'Tracking link:\n{copy.tracking_link}\n\n' + unsub_url_str +
+            f'Tracking link:\n{copy.tracking_link}\n\n' +
+            unsub_url_str +
+            custom_sls_block +
 
             'Sls:\n' +
 
-            copy.lift_sls +
+            (copy.lift_sls if copy.lift_sls else '') +
 
             "\n----------------------------------------\n\n\n\n")
 
@@ -118,7 +138,7 @@ def save_image(image_file_name, image_url, date):
         if not os.path.exists(save_image_path):
             os.makedirs(save_image_path)
 
-        temp_full_image_path = save_image_path + image_file_name
+        temp_full_image_path = 'Images/' + image_file_name
 
         with os.scandir(save_image_path) as entries:
             for entry in entries:
@@ -126,8 +146,14 @@ def save_image(image_file_name, image_url, date):
                     logging.debug(f'Not saving {image_file_name} - image already saved')
                     return
 
-        logging.debug(f'Saving {image_file_name} to {save_image_path}')
+        with os.scandir('Images/') as entries:
+            for entry in entries:
+                if entry.is_file() and image_file_name in entry.name:
+                    logging.debug(f'Image {image_file_name} already downloaded, copying')
+                    shutil.copy(entry.path, save_image_path + entry.name)
+                    return
 
+        logging.debug(f'Saving {image_file_name} to {temp_full_image_path}')
         with open(temp_full_image_path, 'wb') as file:
             response = requests.get(image_url, stream=True)
             if not response.ok:
@@ -147,9 +173,30 @@ def save_image(image_file_name, image_url, date):
 
         os.rename(temp_full_image_path, new_full_image_path)
 
+        shutil.copy(new_full_image_path, save_image_path + image_file_name + f'.{ext}')
+
     except Exception as e:
         logging.error(f'Error while saving image {image_file_name}. Details : {e}')
         logging.debug(traceback.format_exc())
+
+
+def find_custom_image(image_file_name, date):
+    save_image_path = SETTINGS['ImagesDirectory'] + f'{date}/'
+    if not os.path.exists(save_image_path):
+        os.makedirs(save_image_path)
+
+    with os.scandir(save_image_path) as entries:
+        for entry in entries:
+            if entry.is_file() and image_file_name in entry.name:
+                logging.debug(f'Not saving custom image {image_file_name} - image already saved')
+                return
+
+    with os.scandir('Images/') as entries:
+        for entry in entries:
+            if entry.is_file() and image_file_name in entry.name:
+                logging.info(f'Found custom image {image_file_name}, copying')
+                shutil.copy(entry.path, save_image_path + entry.name)
+                return
 
 
 def main_cycle():
@@ -249,12 +296,19 @@ def main_cycle():
                     copies_results.append(get_copy_result(copy, max_len_str_copy))
 
                     save_lift_file(copy, path_to_domain_results)
+
+                    if custom_sls := (CUSTOM_SLS.get(copy.offer_name)):
+                        copy.custom_sls = custom_sls
                     save_sl_file(copy, domain.broadcast['name'], broadcast_date.replace('/', '.'),
                                  path_to_domain_results)
 
+                    if copy.img_code:
+                        find_custom_image(f'{copy.offer_name}_{copy.img_code}', broadcast_date.replace('/', '.'))
+
                     if SETTINGS['SaveImages']:
                         for index, image_url in enumerate(copy.lift_images):
-                            save_image(f'{copy.str_rep}-image-{index + 1}', image_url, broadcast_date.replace('/', '.'))
+                            save_image(f'{copy.offer_name}{copy.lift_number}-image-{index + 1}', image_url,
+                                       broadcast_date.replace('/', '.'))
 
                 except Exception as e:
                     logging.error(f'Error while making copy {copy.str_rep}. Details : {e}')

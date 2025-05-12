@@ -121,7 +121,8 @@ class Offer:
             "AHMS": 8753642885,
             "AHTT": 8753520275,
             "CONO": 7101745053,
-            "AHTG": 8721191855
+            "AHTG": 8721191855,
+            "BIGG": 7654340357
         }
 
         item_id = WRONG_OFFERS.get(self.name)
@@ -222,9 +223,9 @@ class Offer:
 
                 maybe_google_drive_folder_id = google_services.GoogleDrive.get_folder_by_name('HTML+SL',
                                                                                               raw_google_drive_folder_id,
-                                                                                              strict=False)['id']
+                                                                                              strict=False)
                 if maybe_google_drive_folder_id:
-                    google_drive_folder_id = maybe_google_drive_folder_id
+                    google_drive_folder_id = maybe_google_drive_folder_id['id']
                 else:
                     logging.warning(f'Google drive offer folder url was incorrect in Monday, starting manual search')
                     google_drive_folder_id = self.find_offer_folder_manually(partners_folder_id)
@@ -236,7 +237,8 @@ class Offer:
     def find_offer_folder_manually(self, partners_folder_id):
         offer_general_folder = self.get_offer_general_folder(partners_folder_id)
 
-        offer_folder_id = google_services.GoogleDrive.get_folder_by_name('HTML+SL', offer_general_folder, strict=False)
+        offer_folder_id = google_services.GoogleDrive.get_folder_by_name('HTML+SL', offer_general_folder['id'],
+                                                                         strict=False)
         if offer_folder_id:
             offer_folder_id = offer_folder_id['id']
         else:

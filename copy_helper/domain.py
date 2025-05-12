@@ -23,6 +23,8 @@ class Copy:
     lift_sls = ''
     lift_images = []
 
+    custom_sls = {}
+
 
 class Domain:
     def __init__(self, settings_dict):
