@@ -199,6 +199,83 @@ def find_custom_image(image_file_name, date):
                 return
 
 
+def create_new_domain(domain_name):
+    logging.info('Creating new Domain')
+    domain_folder_path = 'Domains/' + f'{domain_name}/'
+    try:
+        os.makedirs(domain_folder_path)
+    except FileExistsError:
+        logging.warning('Domain must have unique name')
+        return
+
+    shutil.copy('Domains/DefaultDomain/settings.json', domain_folder_path)
+    shutil.copy('Domains/DefaultDomain/template.html', domain_folder_path)
+
+
+def make_domain(domain, domain_name, str_copies, broadcast_date):
+    path_to_domain_results = get_domain_result_path(domain.broadcast['name'], broadcast_date.replace('/', '.'))
+
+    copies = []
+    max_len_str_copy = 0
+    for str_copy in str_copies:
+        if str_copy:
+            if (len_str_copy := len(str_copy)) > max_len_str_copy:
+                max_len_str_copy = len_str_copy
+            copies.append(domain.create_copy(str_copy.strip()))
+
+    copies_results = []
+
+    logging.info(f'Processing copies : {", ".join([copy.str_rep for copy in copies])}')
+    for copy in copies:
+        try:
+            copy = domain.find_copy(copy)
+            if not copy.lift_html:
+                logging.info(f'Html was not found for {copy.str_rep}, trying to read from local file')
+                file_name = copy.str_rep + ('-Priority' if copy.priority_info['is_priority'] else '')
+                path = path_to_domain_results + f'{file_name}.html'
+                if os.path.exists(path):
+                    copy.lift_html = open(path, 'r', encoding='utf-8').read()
+
+            copy = domain.make_tracking_link(copy)
+            copy = domain.make_unsub_link(copy)
+            copy = domain.process_images(copy)
+
+            styles_helper = copy_helper.styles_helper.StylesHelper(domain.styles)
+            copy = styles_helper.apply_styles(copy)
+            copy = styles_helper.add_template(copy)
+
+            copy.lift_html = copy.lift_html.replace('urlhere', copy.tracking_link)
+
+            copies_results.append(get_copy_result(copy, max_len_str_copy))
+
+            save_lift_file(copy, path_to_domain_results)
+
+            if custom_sls := (CUSTOM_SLS.get(copy.offer_name)):
+                copy.custom_sls = custom_sls
+            save_sl_file(copy, domain.broadcast['name'], broadcast_date.replace('/', '.'),
+                         path_to_domain_results)
+
+            if copy.img_code:
+                find_custom_image(f'{copy.offer_name}_{copy.img_code}', broadcast_date.replace('/', '.'))
+
+            if SETTINGS['SaveImages']:
+                for index, image_url in enumerate(copy.lift_images):
+                    save_image(f'{copy.offer_name}{copy.lift_number}-image-{index + 1}', image_url,
+                               broadcast_date.replace('/', '.'))
+
+        except Exception as e:
+            logging.error(f'Error while making copy {copy.str_rep}. Details : {e}')
+            logging.debug(traceback.format_exc())
+
+    logging.info('======================')
+
+    logging.info(f'Finished making domain {domain_name} for date {broadcast_date}')
+    for results in copies_results:
+        logging.info(results)
+
+    logging.info('======================')
+
+
 def main_cycle():
     logging.info('Type what you want to do:')
     logging.info('make-domain (md) | clear-cache | add-domain | clear | restart | exit')
@@ -219,16 +296,8 @@ def main_cycle():
             if not domain_name:
                 logging.warning('Domain Name cant be empty')
                 return
-            logging.info('Creating new Domain')
-            domain_folder_path = 'Domains/' + f'{domain_name}/'
-            try:
-                os.makedirs(domain_folder_path)
-            except FileExistsError:
-                logging.warning('Domain must have unique name')
-                return
 
-            shutil.copy('Domains/DefaultDomain/settings.json', domain_folder_path)
-            shutil.copy('Domains/DefaultDomain/template.html', domain_folder_path)
+            create_new_domain(domain_name)
 
         case 'clear-cache':
             logging.info('Specify offer to clear cache')
@@ -260,67 +329,7 @@ def main_cycle():
                 logging.warning('Wrong input')
                 return
 
-            path_to_domain_results = get_domain_result_path(domain.broadcast['name'], broadcast_date.replace('/', '.'))
-
-            copies = []
-            max_len_str_copy = 0
-            for str_copy in str_copies:
-                if str_copy:
-                    if (len_str_copy := len(str_copy)) > max_len_str_copy:
-                        max_len_str_copy = len_str_copy
-                    copies.append(domain.create_copy(str_copy.strip()))
-
-            copies_results = []
-
-            logging.info(f'Processing copies : {", ".join([copy.str_rep for copy in copies])}')
-            for copy in copies:
-                try:
-                    copy = domain.find_copy(copy)
-                    if not copy.lift_html:
-                        logging.info(f'Html was not found for {copy.str_rep}, trying to read from local file')
-                        file_name = copy.str_rep + ('-Priority' if copy.priority_info['is_priority'] else '')
-                        path = path_to_domain_results + f'{file_name}.html'
-                        if os.path.exists(path):
-                            copy.lift_html = open(path, 'r', encoding='utf-8').read()
-
-                    copy = domain.make_tracking_link(copy)
-                    copy = domain.make_unsub_link(copy)
-                    copy = domain.process_images(copy)
-
-                    styles_helper = copy_helper.styles_helper.StylesHelper(domain.styles)
-                    copy = styles_helper.apply_styles(copy)
-                    copy = styles_helper.add_template(copy)
-
-                    copy.lift_html = copy.lift_html.replace('urlhere', copy.tracking_link)
-
-                    copies_results.append(get_copy_result(copy, max_len_str_copy))
-
-                    save_lift_file(copy, path_to_domain_results)
-
-                    if custom_sls := (CUSTOM_SLS.get(copy.offer_name)):
-                        copy.custom_sls = custom_sls
-                    save_sl_file(copy, domain.broadcast['name'], broadcast_date.replace('/', '.'),
-                                 path_to_domain_results)
-
-                    if copy.img_code:
-                        find_custom_image(f'{copy.offer_name}_{copy.img_code}', broadcast_date.replace('/', '.'))
-
-                    if SETTINGS['SaveImages']:
-                        for index, image_url in enumerate(copy.lift_images):
-                            save_image(f'{copy.offer_name}{copy.lift_number}-image-{index + 1}', image_url,
-                                       broadcast_date.replace('/', '.'))
-
-                except Exception as e:
-                    logging.error(f'Error while making copy {copy.str_rep}. Details : {e}')
-                    logging.debug(traceback.format_exc())
-
-            logging.info('======================')
-
-            logging.info(f'Finished making domain {domain_name} for date {broadcast_date}')
-            for results in copies_results:
-                logging.info(results)
-
-            logging.info('======================')
+            make_domain(domain, domain_name, str_copies, broadcast_date)
 
 
 if __name__ == "__main__":
