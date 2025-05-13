@@ -20,7 +20,7 @@ def write_json_file(path, data):
         json.dump(data, file, indent=4)
 
 
-PATH_TO_SECRETS_FILE = 'copy_helper/secrets.json'
+PATH_TO_SECRETS_FILE = 'copy_maker/secrets.json'
 secrets = read_json_file(PATH_TO_SECRETS_FILE)
 
 OAUTH_CLIENT = secrets['OAUTH_CLIENT']

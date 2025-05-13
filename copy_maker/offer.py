@@ -7,7 +7,7 @@ import requests
 from . import google_services
 
 MAX_CACHE_DURATION_SECONDS = 60 * 60 * 6
-PATH_TO_FILE_OFFERS_CACHE = 'copy_helper/offers_info_cache.json'
+PATH_TO_FILE_OFFERS_CACHE = 'copy_maker/offers_info_cache.json'
 
 
 class OffersCache:

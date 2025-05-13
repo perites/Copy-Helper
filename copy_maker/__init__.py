@@ -4,11 +4,11 @@ import os
 
 
 def check_files():
-    if not os.path.exists('copy_helper/offers_info_cache.json'):
-        open('copy_helper/offers_info_cache.json', 'w').write('{}')
+    if not os.path.exists('copy_maker/offers_info_cache.json'):
+        open('copy_maker/offers_info_cache.json', 'w').write('{}')
 
-    if not os.path.exists('copy_helper/secrets.json'):
-        open('copy_helper/secrets.json', 'w').write(json.dumps({
+    if not os.path.exists('copy_maker/secrets.json'):
+        open('copy_maker/secrets.json', 'w').write(json.dumps({
             "MONDAY_TOKEN": "",
             "OAUTH_CLIENT": ""
         }))

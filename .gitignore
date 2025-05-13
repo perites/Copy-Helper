@@ -1,5 +1,5 @@
 /main-log.log
-/copy_helper/offers_info_cache.json
-/copy_helper/secrets.json
+/copy_maker/offers_info_cache.json
+/copy_maker/secrets.json
 /Domains/
 /GeneralSettings.json
