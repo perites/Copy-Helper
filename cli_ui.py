@@ -15,10 +15,14 @@ class CliUI:
         while True:
             try:
                 cls.main_cycle()
+                raise Exception
             except Exception as e:
-                logging.critical(f'Got Unexpected Error! Details : {e}')
+                logging.critical(f'Unexpected Error: {e}')
                 logging.debug(traceback.format_exc())
-                logging.info('Returning to main page')
+                logging.info('Press Enter to return to main page, or type "exit" to quit: ')
+                retry = cls.cinput().strip().lower()
+                if retry == 'exit':
+                    return
 
     @staticmethod
     def cinput():
