@@ -10,6 +10,8 @@ from googleapiclient.discovery import build
 
 from . import secrets
 
+logger = logging.getLogger(__name__)
+
 
 class ServicesHelper:
 
@@ -95,11 +97,11 @@ class GoogleDrive:
                 content = cls.extract_text_from_docx(request.execute())
 
             case _:
-                logging.warning(f'Unknown mime_type {mime_type}, returning None')
+                logger.warning(f'Unknown mime_type {mime_type}, returning None')
                 return
 
         if not content:
-            logging.warning(f'Could not get file content for file {file['name']} ')
+            logger.warning(f'Could not get file content for file {file['name']} ')
             return ''
 
         return content

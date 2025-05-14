@@ -2,6 +2,8 @@ import logging
 import random
 import re
 
+logger = logging.getLogger(__name__)
+
 
 class StylesHelper:
     def __init__(self, styles_settings):
@@ -102,7 +104,7 @@ class StylesHelper:
             old_link_style = link_style[0]
 
             if ('background-color' in old_link_style) or ('background' in old_link_style):
-                logging.debug('Button detected, not changing color')
+                logger.debug('Button detected, not changing color')
                 return a_tag
 
             new_link_style, success = cls.replace_style(r'(?<![-\w])color\s*:\s*([^;"]+)', f'color: {link_color}',
@@ -182,6 +184,7 @@ class StylesHelper:
             'edit your e-mail notification preferences or unsubscribe',
             'Privacy Policy',
             'unsubscribe here',
+            'Unsubscribe Here',
             'click here',
             'here',
         ]
@@ -200,7 +203,7 @@ class StylesHelper:
                 priority_block = footer_text.replace(keyword, unsub_footer_url)
                 return priority_block
 
-        logging.warning(f'No keyword was found in {footer_text}')
+        logger.warning(f'No keyword was found in {footer_text}')
         footer_text += f'\n\nUNSUB-URL: {url}'
         return footer_text
 

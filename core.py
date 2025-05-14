@@ -11,6 +11,8 @@ from PIL import Image
 
 import copy_maker
 
+logger = logging.getLogger(__name__)
+
 
 class Core:
     def __init__(self):
@@ -31,12 +33,12 @@ class Core:
                     "SaveImages": False
                 }
             ))
-            logging.error('Fill general settings!')
+            logger.error('Fill general settings!')
             exit()
 
         if not os.path.exists('custom_sls.json'):
             open('custom_sls.json', 'w').write('{}')
-            logging.debug('Custom sls file created')
+            logger.debug('Custom sls file created')
 
         os.makedirs('Domains', exist_ok=True)
         os.makedirs('Images', exist_ok=True)
@@ -65,7 +67,7 @@ class Core:
 
     @staticmethod
     def restart_script():
-        logging.info("Restarting...")
+        logger.info("Restarting...")
         time.sleep(1)
         os.execl(sys.executable, sys.executable, *sys.argv)
 
@@ -76,15 +78,15 @@ class Core:
     @staticmethod
     def create_new_domain(domain_name):
         if not domain_name:
-            logging.warning('Domain Name cant be empty')
+            logger.warning('Domain Name cant be empty')
             return
 
-        logging.info('Creating new Domain')
+        logger.info('Creating new Domain')
         domain_folder_path = 'Domains/' + f'{domain_name}/'
         try:
             os.makedirs(domain_folder_path)
         except FileExistsError:
-            logging.warning('Domain must have unique name')
+            logger.warning('Domain must have unique name')
             return
 
         shutil.copy('Domains/DefaultDomain/settings.json', domain_folder_path)
@@ -100,7 +102,7 @@ class Core:
 
         copies_results = []
 
-        logging.info(f'Processing copies : {", ".join([copy.str_rep for copy in copies])}')
+        logger.info(f'Processing copies : {", ".join([copy.str_rep for copy in copies])}')
         for copy in copies:
             try:
                 copy = self.make_copy(copy, domain, path_to_domain_results)
@@ -108,16 +110,10 @@ class Core:
                 copies_results.append(self.get_copy_result(copy, max_len_str_copy))
 
             except Exception as e:
-                logging.error(f'Error while making copy {copy.str_rep}. Details : {e}')
-                logging.debug(traceback.format_exc())
+                logger.error(f'Error while making copy {copy.str_rep}. Details : {e}')
+                logger.debug(traceback.format_exc())
 
-        logging.info('======================')
-
-        logging.info(f'Finished making domain {domain_name} for date {broadcast_date}')
-        for results in copies_results:
-            logging.info(results)
-
-        logging.info('======================')
+        return copies_results
 
     def get_domain(self, domain_name):
         domain = self.domains.get(domain_name)
@@ -135,7 +131,7 @@ class Core:
                 path_to_domain_results = self.settings['ResultsDirectory'] + f'{date}/{domain_name}/'
 
             case _:
-                logging.warning('Unknown type of result directory type, using default')
+                logger.warning('Unknown type of result directory type, using default')
                 path_to_domain_results = self.settings['ResultsDirectory'] + f'{date}/{domain_name}/'
 
         os.makedirs(path_to_domain_results, exist_ok=True)
@@ -162,7 +158,7 @@ class Core:
     def make_copy(copy, domain, path_to_domain_results):
         copy = domain.find_copy(copy)
         if not copy.lift_html:
-            logging.info(f'Html was not found for {copy.str_rep}, trying to read from local file')
+            logger.info(f'Html was not found for {copy.str_rep}, trying to read from local file')
             file_name = copy.str_rep + ('-Priority' if copy.priority_info['is_priority'] else '')
             path = path_to_domain_results + f'{file_name}.html'
             if os.path.exists(path):
@@ -211,7 +207,7 @@ class Core:
         path = path_to_domain_results + f'{file_name}.html'
         with open(path, 'w', encoding='utf-8') as file:
             file.write(copy.lift_html)
-            logging.debug(f'Successfully saved lift file for {copy.str_rep}')
+            logger.debug(f'Successfully saved lift file for {copy.str_rep}')
 
     @staticmethod
     def save_sl_file(copy, domain_bc_name, date, path_to_domain_results):
@@ -221,7 +217,7 @@ class Core:
             with open(path_to_sls_file, 'r', encoding='utf-8') as file:
                 sls_file_content = file.read()
                 if copy.str_rep in sls_file_content:
-                    logging.info(f'Did not add sls for {copy.str_rep} in SLs.txt file as already has them')
+                    logger.info(f'Did not add sls for {copy.str_rep} in SLs.txt file as already has them')
                     return
 
         if copy.priority_info['is_priority']:
@@ -259,7 +255,7 @@ class Core:
 
         with open(path_to_sls_file, 'a', encoding='utf-8') as file:
             file.write(copy_sls)
-            logging.info(f'Successfully add sls for {copy.str_rep} in SLs.txt')
+            logger.info(f'Successfully add sls for {copy.str_rep} in SLs.txt')
 
     @staticmethod
     def save_image(image_file_name, image_url, save_image_path):
@@ -273,21 +269,21 @@ class Core:
             with os.scandir(save_image_path) as entries:
                 for entry in entries:
                     if entry.is_file() and image_file_name in entry.name:
-                        logging.debug(f'Not saving {image_file_name} - image already saved')
+                        logger.debug(f'Not saving {image_file_name} - image already saved')
                         return
 
             with os.scandir('Images/') as entries:
                 for entry in entries:
                     if entry.is_file() and image_file_name in entry.name:
-                        logging.debug(f'Image {image_file_name} already downloaded, copying')
+                        logger.debug(f'Image {image_file_name} already downloaded, copying')
                         shutil.copy(entry.path, save_image_path + entry.name)
                         return
 
-            logging.debug(f'Saving {image_file_name} to {temp_full_image_path}')
+            logger.debug(f'Saving {image_file_name} to {temp_full_image_path}')
             with open(temp_full_image_path, 'wb') as file:
                 response = requests.get(image_url, stream=True)
                 if not response.ok:
-                    logging.warning(
+                    logger.warning(
                         f'Error while saving image {image_file_name}. Request status code {response.status_code}')
 
                     return
@@ -306,8 +302,8 @@ class Core:
             shutil.copy(new_full_image_path, save_image_path + image_file_name + f'.{ext}')
 
         except Exception as e:
-            logging.error(f'Error while saving image {image_file_name}. Details : {e}')
-            logging.debug(traceback.format_exc())
+            logger.error(f'Error while saving image {image_file_name}. Details : {e}')
+            logger.debug(traceback.format_exc())
 
     @staticmethod
     def find_custom_image(image_file_name, save_image_path):
@@ -317,13 +313,13 @@ class Core:
         with os.scandir(save_image_path) as entries:
             for entry in entries:
                 if entry.is_file() and image_file_name in entry.name:
-                    logging.debug(f'Not saving custom image {image_file_name} - image already saved')
+                    logger.debug(f'Not saving custom image {image_file_name} - image already saved')
                     return
 
         with os.scandir('Images/') as entries:
             for entry in entries:
                 if entry.is_file() and image_file_name in entry.name:
-                    logging.info(f'Found custom image {image_file_name}, copying')
+                    logger.info(f'Found custom image {image_file_name}, copying')
                     shutil.copy(entry.path, save_image_path + entry.name)
                     return
 

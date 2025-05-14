@@ -6,6 +6,8 @@ from . import google_services
 from . import secrets
 from .offer import Offer
 
+logger = logging.getLogger(__name__)
+
 
 @dataclasses.dataclass
 class Copy:
@@ -39,14 +41,14 @@ class Domain:
                                                                              f'{self.broadcast['page']}!1:1')
 
         if not domain_index:
-            logging.warning(f'Could not find domain {self.broadcast['name']} in Broadcast')
+            logger.warning(f'Could not find domain {self.broadcast['name']} in Broadcast')
             return
 
         date_index = google_services.GoogleSheets.get_table_index_of_value(self.broadcast['id'], date,
                                                                            f'{self.broadcast['page']}!A:A', False)
 
         if not domain_index:
-            logging.warning(f'Could not find date {date} in Broadcast')
+            logger.warning(f'Could not find date {date} in Broadcast')
             return
 
         date_row = date_index + 1
@@ -54,7 +56,7 @@ class Domain:
         copies_for_date = google_services.GoogleSheets.get_data_from_range(self.broadcast['id'], copies_range)
         copies_for_domain = copies_for_date[0][domain_index]
         if not copies_for_domain:
-            logging.warning(f'Could not find copies in range {copies_range} in Broadcast')
+            logger.warning(f'Could not find copies in range {copies_range} in Broadcast')
             return
 
         return copies_for_domain.strip().split(' ')
@@ -95,7 +97,7 @@ class Domain:
     def make_tracking_link(self, copy):
         tracking_id = copy.offer_monday_fields.get(self.products['trackingLink']['type'])
         if not tracking_id:
-            logging.warning('Unknown Tracking Type. Ensure it is same as in Monday.')
+            logger.warning('Unknown Tracking Type. Ensure it is same as in Monday.')
             tracking_id = 'UNKNOWN_TYPE'
 
         match self.products['trackingLink']['endType']:
@@ -130,8 +132,8 @@ class Domain:
         src_list = re.findall(src_part_pattern, copy.lift_html)
         if len(src_list) == 0:
             if copy.img_code:
-                logging.info('Copy has img code and doesnt contain images')
-                logging.debug(f'Adding image block to copy {copy.str_rep}')
+                logger.info('Copy has img code and doesnt contain images')
+                logger.debug(f'Adding image block to copy {copy.str_rep}')
                 copy.lift_html = copy.lift_html.replace('<br><br>',
                                                         f'<!-- image-block-start -->{self.styles['imageBlock']}<!-- image-block-end -->',
                                                         1)
@@ -139,10 +141,10 @@ class Domain:
                 return copy
 
             else:
-                logging.debug('No images no image code, doing nothing')
+                logger.debug('No images no image code, doing nothing')
                 return copy
 
-        logging.info(f'Found {len(src_list)} images')
+        logger.info(f'Found {len(src_list)} images')
         for index, src_part in enumerate(src_list):
             img_url = src_part.split('"')[1]
             if img_url not in images_urls:

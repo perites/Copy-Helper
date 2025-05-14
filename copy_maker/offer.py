@@ -9,19 +9,21 @@ from . import google_services
 MAX_CACHE_DURATION_SECONDS = 60 * 60 * 6
 PATH_TO_FILE_OFFERS_CACHE = 'copy_maker/offers_info_cache.json'
 
+logger = logging.getLogger(__name__)
+
 
 class OffersCache:
 
     @classmethod
     def get_cache(cls):
-        logging.debug('Getting all offers info cache')
+        logger.debug('Getting all offers info cache')
         offers_info_cache = cls.read_json_file(PATH_TO_FILE_OFFERS_CACHE)
 
         return offers_info_cache
 
     @classmethod
     def set_cache(cls, new_offers_info_cache):
-        logging.debug('Setting new offers info cache')
+        logger.debug('Setting new offers info cache')
         cls.write_json_file(PATH_TO_FILE_OFFERS_CACHE, new_offers_info_cache)
 
     @classmethod
@@ -39,26 +41,26 @@ class OffersCache:
         match option:
             case 'all':
                 cls.set_cache({})
-                logging.info('All cache successfully cleared')
+                logger.info('All cache successfully cleared')
             case _:
                 all_cache = cls.get_cache()
                 if not all_cache.get(option):
-                    logging.warning(f'Can`t clear cache of {option} as it is NOT found in cache')
+                    logger.warning(f'Can`t clear cache of {option} as it is NOT found in cache')
                     return
 
                 del all_cache[option]
                 cls.set_cache(all_cache)
-                logging.info(f'Cache for offer {option} cleared')
+                logger.info(f'Cache for offer {option} cleared')
 
     @staticmethod
     def read_json_file(path):
-        logging.debug(f'Reading json file {path}')
+        logger.debug(f'Reading json file {path}')
         with open(path, 'r', encoding="utf-8") as file:
             return json.load(file)
 
     @staticmethod
     def write_json_file(path, data):
-        logging.debug(f'Writing to {path}')
+        logger.debug(f'Writing to {path}')
         with open(path, 'w') as file:
             json.dump(data, file, indent=4)
 
@@ -71,7 +73,7 @@ class OffersCache:
 #
 #     @classmethod
 #     def get_cached_offer(cls, offer_name):
-#         logging.debug('Getting offer cache')
+#         logger.debug('Getting offer cache')
 #         cached_offer_info = cls.redis_db.get(offer_name)
 #         if cached_offer_info:
 #             cached_offer_info = json.loads(cached_offer_info.decode('utf-8'))
@@ -98,15 +100,15 @@ class Offer:
 
         offer_cached_info = OffersCache.get_cache().get(self.name)
         if offer_cached_info and (offer_cached_info['creation_timestamp'] + MAX_CACHE_DURATION_SECONDS > time.time()):
-            logging.debug(f'Found valid cache for {self.name}')
+            logger.debug(f'Found valid cache for {self.name}')
             return offer_cached_info
 
         if not board_id or not partners_folder_id or not monday_token:
-            logging.error('Offer was not found in cache and no board id or partners_folder_id was provided')
+            logger.error('Offer was not found in cache and no board id or partners_folder_id was provided')
             raise OfferNotFound(self.name)
 
-        logging.debug(f'Offer {self.name} was not found in cache')
-        logging.debug(f'Getting new info to cache for offer {self.name}')
+        logger.debug(f'Offer {self.name} was not found in cache')
+        logger.debug(f'Getting new info to cache for offer {self.name}')
         raw_offer_monday_fields = self._get_raw_offer_info(board_id, monday_token)
         offer_info = self._process_raw_offer_info(raw_offer_monday_fields, partners_folder_id)
 
@@ -115,7 +117,7 @@ class Offer:
         return offer_info
 
     def _get_raw_offer_info(self, board_id, monday_token):
-        logging.info(f'Getting raw info for {self.name} from backend')
+        logger.info(f'Getting raw info for {self.name} from backend')
 
         WRONG_OFFERS = {
             "AHMS": 8753642885,
@@ -201,7 +203,7 @@ class Offer:
         if not raw_offer_info:
             raise OfferNotFound(self.name)
 
-        logging.debug(f'Processing raw offer {self.name} info')
+        logger.debug(f'Processing raw offer {self.name} info')
 
         offer_info = self.validate_offer_google_drive_url(raw_offer_info, partners_folder_id)
 
@@ -211,14 +213,14 @@ class Offer:
         offer_name = offer_monday_fields['name']
         google_drive_offer_folder_url = offer_monday_fields.get('Copy Location')
         if not google_drive_offer_folder_url:
-            logging.warning(f'Google drive offer folder url was not found in Monday, starting manual search')
+            logger.warning(f'Google drive offer folder url was not found in Monday, starting manual search')
             google_drive_folder_id = self.find_offer_folder_manually(partners_folder_id)
 
         else:
             raw_google_drive_folder_id = google_drive_offer_folder_url.split('/folders/')[1]
 
             if not google_services.GoogleDrive.get_folder_by_name('Lift', raw_google_drive_folder_id, False):
-                logging.warning(
+                logger.warning(
                     f'Something wrong with Copy Location url of offer {offer_name}, no lift folder was found in given folder')
 
                 maybe_google_drive_folder_id = google_services.GoogleDrive.get_folder_by_name('HTML+SL',
@@ -227,7 +229,7 @@ class Offer:
                 if maybe_google_drive_folder_id:
                     google_drive_folder_id = maybe_google_drive_folder_id['id']
                 else:
-                    logging.warning(f'Google drive offer folder url was incorrect in Monday, starting manual search')
+                    logger.warning(f'Google drive offer folder url was incorrect in Monday, starting manual search')
                     google_drive_folder_id = self.find_offer_folder_manually(partners_folder_id)
             else:
                 google_drive_folder_id = raw_google_drive_folder_id
@@ -242,7 +244,7 @@ class Offer:
         if offer_folder_id:
             offer_folder_id = offer_folder_id['id']
         else:
-            logging.warning(
+            logger.warning(
                 f'Folder "HTML+SL" was not found for offer {self.name}. Folder id where searching: {offer_general_folder}')
 
         return offer_folder_id
@@ -255,7 +257,7 @@ class Offer:
             if offer_general_folder:
                 return offer_general_folder
 
-        logging.warning(f'No Partners with offer {self.name} was found in GoogleDrive')
+        logger.warning(f'No Partners with offer {self.name} was found in GoogleDrive')
 
     def get_priority_footer_values(self, tableID, pages, text_column, link_column, id_column):
 
@@ -267,7 +269,7 @@ class Offer:
                 'unsub_id': ''
             }
 
-        logging.debug(f'Searching for footer for offer {self.name}')
+        logger.debug(f'Searching for footer for offer {self.name}')
 
         priority_product_index, priority_product_page = None, None
 
@@ -295,15 +297,15 @@ class Offer:
             tableID, f'{priority_product_page}!{text_column}{priority_product_index}')[0][0]
 
         if text_value:
-            logging.info(f'Priority footer was found for {self.name}')
+            logger.info(f'Priority footer was found for {self.name}')
         else:
-            logging.debug(f'Priority footer not found for {self.name}')
+            logger.debug(f'Priority footer not found for {self.name}')
 
         unsub_url = google_services.GoogleSheets.get_data_from_range(
             tableID, f'{priority_product_page}!{link_column}{priority_product_index}')
 
         if not unsub_url:
-            logging.warning('Unsub url not found')
+            logger.warning('Unsub url not found')
         else:
             unsub_url = unsub_url[0][0]
 
@@ -313,7 +315,7 @@ class Offer:
                 tableID, f'{priority_product_page}!{id_column}{priority_product_index}')
 
             if not unsub_id:
-                logging.warning('Unsub ID not found')
+                logger.warning('Unsub ID not found')
             else:
                 unsub_id = unsub_id[0][0]
 
@@ -346,7 +348,7 @@ class Offer:
                         'SL' not in file['name']):
                     lift_file = file
                     mjml_found = True
-                    logging.debug(f"Found copy file (mjml): {lift_file['name']}")
+                    logger.debug(f"Found copy file (mjml): {lift_file['name']}")
 
                 elif (not lift_file) and (file['name'].lower().endswith('.html')) and ('SL' not in file['name']):
                     lift_file = file
@@ -354,7 +356,7 @@ class Offer:
             if not sl_file:
                 if 'sl' in file['name'].lower():
                     sl_file = file
-                    logging.debug(f"Found SL file: {sl_file['name']}")
+                    logger.debug(f"Found SL file: {sl_file['name']}")
 
             if mjml_found and sl_file:
                 break
@@ -362,13 +364,13 @@ class Offer:
         return lift_file, sl_file
 
     def get_copy_files_content(self, lift_number):
-        logging.info(f'Searching copy files for offer {self.name} and lift {lift_number}')
+        logger.info(f'Searching copy files for offer {self.name} and lift {lift_number}')
 
         lift_folder = google_services.GoogleDrive.get_folder_by_name(f'Lift {lift_number}',
                                                                      self.fields['Copy Location'].split('/folders/')[1])
 
         if not lift_folder:
-            logging.warning(
+            logger.warning(
                 f'Could not find folder Lift {lift_number} in offer {self.name}. Please check if folder exist on google drive')
             lift_file, sl_file = None, None
         else:
@@ -378,12 +380,12 @@ class Offer:
         if lift_file:
             lift_file_content = google_services.GoogleDrive.get_file_content(lift_file)
         else:
-            logging.warning(f'Lift file for {self.name} was not found')
+            logger.warning(f'Lift file for {self.name} was not found')
 
         if sl_file:
             sl_file_content = google_services.GoogleDrive.get_file_content(sl_file)
         else:
-            logging.warning(f'Sl file for {self.name} was not found')
+            logger.warning(f'Sl file for {self.name} was not found')
 
         return lift_file_content, sl_file_content
 
