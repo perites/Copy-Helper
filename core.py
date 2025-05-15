@@ -108,6 +108,7 @@ class Core:
                 copy = self.make_copy(copy, domain, path_to_domain_results)
                 self.save_copy(copy, domain_bc_name, date, path_to_domain_results)
                 copies_results.append(self.get_copy_result(copy, max_len_str_copy))
+                logger.debug(self.get_copy_result(copy, max_len_str_copy))
 
             except Exception as e:
                 logger.error(f'Error while making copy {copy.str_rep}. Details : {e}')

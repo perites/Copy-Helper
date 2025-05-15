@@ -1,74 +1,115 @@
-import datetime
 import logging
 import traceback
 
-import logger
+import questionary
+from prompt_toolkit.styles import Style
+
 from core import core
+
+logger = logging.getLogger(__name__)
 
 
 class CliUI:
+    autocomplete_style = Style.from_dict({
+        "completion-menu.completion": "bg:#444444 ansiwhite",
+        "scrollbar.background": "bg:black",
+        "scrollbar.button": "bg:black",
+        "prompt": "bold ansiwhite",
+    })
+
     @classmethod
     def start(cls):
         cls.clear_console()
-        logging.info('Welcome to copy-helper')
-        logging.info('Loading...')
+        questionary.print('Welcome to copy-helper')
         while True:
             try:
                 cls.main_cycle()
-                raise Exception
             except Exception as e:
-                logging.critical(f'Unexpected Error: {e}')
-                logging.debug(traceback.format_exc())
-                logging.info('Press Enter to return to main page, or type "exit" to quit: ')
-                retry = cls.cinput().strip().lower()
+                logger.critical(f'Unexpected Error: {e}')
+                logger.debug(traceback.format_exc())
+                retry = questionary.autocomplete(
+                    'Press Enter to return to main page, or type "exit" to quit:',
+                    choices=['exit'], ignore_case=True,
+                    match_middle=True, style=cls.autocomplete_style).ask().strip().lower()
                 if retry == 'exit':
-                    return
+                    core.exit()
 
-    @staticmethod
-    def cinput():
-        prefix = f'{datetime.datetime.now():{logger.datefmt}} [INPUT] > '
-        return input(prefix).strip()
+    @classmethod
+    def main_cycle(cls):
+
+        menu_options = {
+            'make-domain': cls.make_domain,
+            'add-domain': cls.add_domain,
+            'clear-cache': cls.clear_cache,
+            'clear': cls.clear_console,
+            'restart': core.restart_script,
+            'exit': core.exit
+        }
+
+        questionary.print(f'Avalible options : {", ".join(menu_options.keys())}')
+        option = questionary.autocomplete(
+            "Select an option:",
+            choices=list(menu_options.keys()),
+            validate=lambda val: val in list(menu_options.keys()),
+            ignore_case=True,
+            match_middle=True, style=cls.autocomplete_style
+
+        ).ask()
+
+        option_fun = menu_options.get(option)
+
+        if option_fun:
+            option_fun()
+
+    @classmethod
+    def make_domain(cls):
+        domain_name = questionary.select("Choose domain", choices=core.domains).ask()
+        broadcast_date = questionary.text("Enter broadcast date:").ask().strip()
+
+        str_copies = questionary.text("Enter copies (press enter to fetch form broadcast):").ask().strip()
+        str_copies = str_copies.split(' ') if str_copies else None
+
+        copies_results = core.make_domain(domain_name, broadcast_date, cls.get_str_copies, str_copies)
+
+        questionary.print('======================')
+        questionary.print(f'Finished making domain {domain_name} for date {broadcast_date}')
+        for results in copies_results:
+            questionary.print(results)
+        questionary.print('======================')
+
+    @classmethod
+    def get_str_copies(cls):
+        str_copies = questionary.text(
+            'Copies were not found, you can enter them manually (separated by space):').ask().strip().split(' ')
+
+        return str_copies
+
+    @classmethod
+    def add_domain(cls):
+        domain_name = questionary.text("Enter new domain name:").ask().strip()
+        core.create_new_domain(domain_name)
+
+    @classmethod
+    def clear_cache(cls):
+        option = questionary.text("Specify offer to clear cache:").ask().strip()
+        core.clear_cache(option)
 
     @staticmethod
     def clear_console():
         print("\033[H\033[J\033[3J", end="")
 
-    @classmethod
-    def get_str_copies(cls):
-        logging.info('Copies were not found, you can enter them manually (separated by space)')
-        str_copies = cls.cinput().split(' ')
-        return str_copies
-
-    @classmethod
-    def main_cycle(cls):
-        logging.info('Type what you want to do:')
-        logging.info('make-domain (md) | clear-cache | add-domain | clear | restart | exit')
-        action = cls.cinput()
-        match action:
-            case 'exit':
-                core.exit()
-
-            case 'restart':
-                core.restart_script()
-
-            case 'clear':
-                cls.clear_console()
-
-            case 'add-domain':
-                logging.info('Enter new domain name')
-                domain_name = cls.cinput()
-                core.create_new_domain(domain_name)
-
-            case 'clear-cache':
-                logging.info('Specify offer to clear cache')
-                option = cls.cinput()
-                core.clear_cache(option)
-
-            case 'make-domain' | 'md':
-                logging.info('To make domain, enter <domain-name> <date>')
-                logging.info(f'Added domains : {', '.join(sorted(core.domains.keys()))}')
-
-                user_input = cls.cinput().strip().split(' ')
-                domain_name, broadcast_date, *str_copies = user_input
-
-                core.make_domain(domain_name, broadcast_date, cls.get_str_copies, str_copies)
+    # @classmethod
+    # def edit_dict(cls, dict_obj):
+    #
+    #     keys = list(dict_obj.keys())
+    #     key = questionary.select("Select a key to edit", choices=keys).ask()
+    #
+    #     value = dict_obj[key]
+    #     if isinstance(value, dict):
+    #         # Recursive editing
+    #         dict_obj[key] = cls.edit_dict(dict_obj[key])
+    #     else:
+    #         new_val = questionary.text(f"Enter new value for {key} (currently: {value})").ask().strip()
+    #         dict_obj[key] = new_val
+    #
+    #     return dict_obj
