@@ -3,7 +3,6 @@ import logging
 import os
 import shutil
 import sys
-import time
 import traceback
 
 import requests
@@ -67,8 +66,7 @@ class Core:
 
     @staticmethod
     def restart_script():
-        logger.info("Restarting...")
-        time.sleep(1)
+        logger.debug('Restarting')
         os.execl(sys.executable, sys.executable, *sys.argv)
 
     @staticmethod
@@ -102,11 +100,17 @@ class Core:
 
         copies_results = []
 
-        logger.info(f'Processing copies : {", ".join([copy.str_rep for copy in copies])}')
+        message = f'Processing copies: {", ".join([copy.str_rep for copy in copies])}'
+        logger.info(message)
+        # yield message
+
         for copy in copies:
             try:
+                # yield f'Making {copy.str_rep}'
                 copy = self.make_copy(copy, domain, path_to_domain_results)
+                # yield f'Saving {copy.str_rep}'
                 self.save_copy(copy, domain_bc_name, date, path_to_domain_results)
+
                 copies_results.append(self.get_copy_result(copy, max_len_str_copy))
                 logger.debug(self.get_copy_result(copy, max_len_str_copy))
 

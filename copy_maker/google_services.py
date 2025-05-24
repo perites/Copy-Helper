@@ -128,12 +128,12 @@ class GoogleSheets:
         return values
 
     @classmethod
-    def get_data_from_range(cls, spreadsheet_id, range):
+    def get_data_from_range(cls, spreadsheet_id, range, use_cache=False):
         request = (spreadsheet_id, range)
 
-        # values = cls.cache.get(request)
-        # if values:
-        #     return values
+        values = cls.cache.get(request)
+        if values and use_cache:
+            return values
 
         values = cls.get_new_data_from_range(*request)
 
@@ -143,13 +143,18 @@ class GoogleSheets:
 
     @classmethod
     def get_table_index_of_value(cls, spreadsheet_id, value, range, is_row=True, strict=True):
-        all_values = cls.get_data_from_range(spreadsheet_id, range)
+        all_values = cls.get_data_from_range(spreadsheet_id, range, use_cache=True)
 
         if is_row:
             all_values = all_values[0] if is_row else all_values
-            value_index = all_values.index(value)
-            # TODO add strict=False support
-            return value_index
+            if strict:
+                index = all_values.index(value)
+                return index
+            else:
+                for index, data in enumerate(all_values):
+                    data = data.strip() if data else None
+                    if value in data:
+                        return index
 
         else:
             for index, table_row in enumerate(all_values):

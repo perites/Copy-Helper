@@ -2,6 +2,8 @@ import dataclasses
 import logging
 import re
 
+from openpyxl.utils import get_column_letter
+
 from . import google_services
 from . import secrets
 from .offer import Offer
@@ -35,7 +37,6 @@ class Domain:
         self.styles = settings_dict['styles']
 
     def get_copies_from_broadcast(self, date):
-
         domain_index = google_services.GoogleSheets.get_table_index_of_value(self.broadcast['id'],
                                                                              self.broadcast['name'],
                                                                              f'{self.broadcast['page']}!1:1')
@@ -47,19 +48,18 @@ class Domain:
         date_index = google_services.GoogleSheets.get_table_index_of_value(self.broadcast['id'], date,
                                                                            f'{self.broadcast['page']}!A:A', False)
 
-        if not domain_index:
+        if not date_index:
             logger.warning(f'Could not find date {date} in Broadcast')
             return
 
         date_row = date_index + 1
-        copies_range = f'{self.broadcast['page']}!{date_row}:{date_row}'
-        copies_for_date = google_services.GoogleSheets.get_data_from_range(self.broadcast['id'], copies_range)
-        copies_for_domain = copies_for_date[0][domain_index]
+        copies_range = f'{self.broadcast['page']}!{get_column_letter(domain_index + 1)}{date_row}'
+        copies_for_domain = google_services.GoogleSheets.get_data_from_range(self.broadcast['id'], copies_range)
         if not copies_for_domain:
-            logger.warning(f'Could not find copies in range {copies_range} in Broadcast')
+            logger.info(f'Could not find copies in range {copies_range} in Broadcast')
             return
 
-        return copies_for_domain.strip().split(' ')
+        return copies_for_domain[0][0].strip().split(' ')
 
     @staticmethod
     def create_copy(str_copy):
