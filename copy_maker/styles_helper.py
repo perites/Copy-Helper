@@ -50,10 +50,10 @@ class StylesHelper:
             copy.lift_html, success = self.replace_style(r'line-height\s*:\s*1.5', f'line-height:{line_height}',
                                                          copy.lift_html)
 
-        if self.styles_settings['linksColor']:
-            links_color = self.styles_settings['linksColor'] if self.styles_settings[
-                                                                    'linksColor'] != 'random-blue' else self.get_random_blue()
-            copy.lift_html = self.change_links_color(copy.lift_html, links_color)
+        links_color = self.styles_settings['linksColor'] if self.styles_settings[
+                                                                'linksColor'] != 'random-blue' else self.get_random_blue()
+        add_es_button = self.styles_settings['addEsButton']
+        copy.lift_html = self.change_links(copy.lift_html, links_color, add_es_button)
 
         return copy
 
@@ -88,14 +88,27 @@ class StylesHelper:
         return new_lift_html, True
 
     @classmethod
-    def change_links_color(cls, html_copy, link_color):
+    def change_links(cls, html_copy, link_color, add_es_button):
         a_tag_pattern = r'<a\s+([^>]*)'
 
-        for old_a_tag in re.findall(a_tag_pattern, html_copy):
-            new_a_tag = cls.change_link_color(link_color, old_a_tag)
+        all_a_tags = re.findall(a_tag_pattern, html_copy)
+
+        for old_a_tag in all_a_tags:
+            new_a_tag = old_a_tag
+            if link_color:
+                new_a_tag = cls.change_link_color(link_color, old_a_tag)
+            if add_es_button:
+                new_a_tag = cls.add_es_button(new_a_tag)
+                add_es_button = False
+
             html_copy = html_copy.replace(old_a_tag, new_a_tag, 1)
 
         return html_copy
+
+    @classmethod
+    def add_es_button(cls, a_tag):
+        new_a_tag = a_tag + ' class="es-button"'
+        return new_a_tag
 
     @classmethod
     def change_link_color(cls, link_color, a_tag):

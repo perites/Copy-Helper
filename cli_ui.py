@@ -81,7 +81,7 @@ class CliUI:
             return
 
         broadcast_date = questionary.text("Enter broadcast date:",
-                                          default=datetime.today().strftime('%-m/%-d')).ask().strip()
+                                          default=f"{datetime.today().month}/{datetime.today().day}").ask().strip()
         if broadcast_date == 'back':
             return
 
