@@ -9,6 +9,7 @@ import requests
 from PIL import Image
 
 import copy_maker
+import default_config
 
 logger = logging.getLogger(__name__)
 
@@ -24,14 +25,7 @@ class Core:
     @staticmethod
     def check_paths():
         if not os.path.exists('GeneralSettings.json'):
-            open('GeneralSettings.json', 'w').write(json.dumps(
-                {
-                    "ResultsDirectory": "",
-                    "ResultsDirectoryType": "",
-                    "ImagesDirectory": "",
-                    "SaveImages": False
-                }
-            ))
+            open('GeneralSettings.json', 'w').write(default_config.default_general_settings)
             logger.error('Fill general settings!')
             exit()
 
@@ -39,7 +33,15 @@ class Core:
             open('custom_sls.json', 'w').write('{}')
             logger.debug('Custom sls file created')
 
-        os.makedirs('Domains', exist_ok=True)
+        os.makedirs('Domains/DefaultDomain', exist_ok=True)
+        if not os.path.exists('Domains/DefaultDomain/settings.json'):
+            open('Domains/DefaultDomain/settings.json', 'w').write(default_config.default_domain_settings)
+            logger.debug('DefaultDomain settings file created')
+
+        if not os.path.exists('Domains/DefaultDomain/template.html'):
+            open('Domains/DefaultDomain/template.html', 'w').write(default_config.default_domain_template)
+            logger.debug('DefaultDomain template file created')
+
         os.makedirs('Images', exist_ok=True)
 
     @staticmethod

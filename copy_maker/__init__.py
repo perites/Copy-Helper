@@ -1,6 +1,7 @@
-import json
 import logging
 import os
+
+import default_config
 
 
 def check_files():
@@ -8,11 +9,7 @@ def check_files():
         open('copy_maker/offers_info_cache.json', 'w').write('{}')
 
     if not os.path.exists('copy_maker/secrets.json'):
-        open('copy_maker/secrets.json', 'w').write(json.dumps({
-            "MONDAY_TOKEN": "",
-            "OAUTH_CLIENT": ""
-        }))
-
+        open('copy_maker/secrets.json', 'w').write(default_config.default_secret_file)
         logging.warning('Fill secrets file!')
         exit()
 
