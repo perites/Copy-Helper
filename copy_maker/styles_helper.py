@@ -39,6 +39,14 @@ class StylesHelper:
                                                          f'padding:{upper_down_elements_padding} {side_elements_padding}',
                                                          copy.lift_html)
 
+            if not success:
+                copy.lift_html, success = self.replace_style(r'padding-left\s*:\s*([^;"]+)',
+                                                             f'padding-left:{side_elements_padding}',
+                                                             copy.lift_html)
+                copy.lift_html, success = self.replace_style(r'padding-right\s*:\s*([^;"]+)',
+                                                             f'padding-right:{side_elements_padding}',
+                                                             copy.lift_html)
+
         if self.styles_settings['upperDownCopyPadding']:
             upper_down_copy_padding = self.calculate_value(self.styles_settings['upperDownCopyPadding'])
 
