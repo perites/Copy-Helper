@@ -188,8 +188,9 @@ class Core:
         html_r = '+' if copy.html_found else '-'
         sl_r = '+' if copy.lift_sls else '-'
         pfooter_r = '+' if copy.priority_info['unsub_text'] else '-'
-        link_r = '+' if 'UNKNOWN_TYPE' not in copy.tracking_link else '-'
-        result = f'{copy.str_rep + (' ' * (max_len_str_copy - len(copy.str_rep)))} : html {html_r} | sl {sl_r} | pfooter {pfooter_r} | link {link_r} | img {len(copy.lift_images)}'
+        link_maid = 'UNKNOWN_TYPE' not in copy.tracking_link
+        link_r = '+' if link_maid else '-'
+        result = f'{"Warning!:" if not link_maid else ""}{copy.str_rep + (' ' * (max_len_str_copy - len(copy.str_rep)))} : html {html_r} | sl {sl_r} | pfooter {pfooter_r} | link {link_r} | img {len(copy.lift_images)}'
 
         return result
 
