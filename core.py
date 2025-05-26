@@ -171,6 +171,10 @@ class Core:
             if os.path.exists(path):
                 copy.lift_html = open(path, 'r', encoding='utf-8').read()
 
+            if not copy.lift_html:
+                logger.warning('Can`t find copy html')
+                return copy
+
         copy = domain.make_tracking_link(copy)
         copy = domain.make_unsub_link(copy)
         copy = domain.process_images(copy)
