@@ -1,5 +1,5 @@
+import json
 import logging
-import os
 from io import BytesIO
 
 from docx import Document
@@ -8,24 +8,12 @@ from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 
-from . import paths
+from . import secrets
+
+logger = logging.getLogger(__name__)
 
 
 class ServicesHelper:
-    @classmethod
-    def get_service(cls, service_name):
-        match service_name:
-            case "drive":
-                version = "v3"
-
-            case "sheets":
-                version = "v4"
-
-            case _:
-                return
-
-        service = build(service_name, version, credentials=cls.get_credentials(), cache_discovery=False)
-        return service
 
     @staticmethod
     def get_credentials():
@@ -33,10 +21,8 @@ class ServicesHelper:
 
         scopes = ['https://www.googleapis.com/auth/drive', 'https://www.googleapis.com/auth/spreadsheets.readonly']
 
-        path_to_credentials = paths.PATH_TO_FOLDER_SYSTEM_DATA + 'services_token.json'
-
-        if os.path.exists(path_to_credentials):
-            creds = Credentials.from_authorized_user_file(path_to_credentials, scopes)
+        if secrets.CREDENTIALS:
+            creds = Credentials.from_authorized_user_info(secrets.CREDENTIALS, scopes)
 
         if creds:
             if creds.valid:
@@ -44,21 +30,20 @@ class ServicesHelper:
 
             elif creds.expired and creds.refresh_token:
                 creds.refresh(Request())
-                with open(path_to_credentials, 'w', encoding='utf-8') as file:
-                    file.write(creds.to_json())
+
+                secrets.update_credentials(json.loads(creds.to_json()))
                 return creds
 
-        flow = InstalledAppFlow.from_client_secrets_file(paths.PATH_TO_FILE_OAUTH, scopes)
+        flow = InstalledAppFlow.from_client_config(secrets.OAUTH_CLIENT, scopes)
         creds = flow.run_local_server(port=0)
 
-        with open(path_to_credentials, 'w', encoding='utf-8') as file:
-            file.write(creds.to_json())
+        secrets.update_credentials(json.loads(creds.to_json()))
 
         return creds
 
 
 class GoogleDrive:
-    drive_service = ServicesHelper.get_service('drive')
+    drive_service = build('drive', 'v3', credentials=ServicesHelper.get_credentials(), cache_discovery=False)
 
     @classmethod
     def execute_query(cls, query, fields='files(id, name)'):
@@ -112,11 +97,11 @@ class GoogleDrive:
                 content = cls.extract_text_from_docx(request.execute())
 
             case _:
-                logging.warning(f'Unknown mime_type {mime_type}, returning None')
+                logger.warning(f'Unknown mime_type {mime_type}, returning None')
                 return
 
         if not content:
-            logging.warning(f'Could not get file content for file {file['name']} ')
+            logger.warning(f'Could not get file content for file {file['name']} ')
             return ''
 
         return content
@@ -130,7 +115,7 @@ class GoogleDrive:
 
 
 class GoogleSheets:
-    sheet_service = ServicesHelper.get_service('sheets')
+    sheet_service = build('sheets', 'v4', credentials=ServicesHelper.get_credentials(), cache_discovery=False)
     cache = {}
 
     @classmethod
@@ -143,12 +128,12 @@ class GoogleSheets:
         return values
 
     @classmethod
-    def get_data_from_range(cls, spreadsheet_id, range):
+    def get_data_from_range(cls, spreadsheet_id, range, use_cache=False):
         request = (spreadsheet_id, range)
 
-        # values = cls.cache.get(request)
-        # if values:
-        #     return values
+        values = cls.cache.get(request)
+        if values and use_cache:
+            return values
 
         values = cls.get_new_data_from_range(*request)
 
@@ -157,18 +142,28 @@ class GoogleSheets:
         return values
 
     @classmethod
-    def get_table_index_of_value(cls, spreadsheet_id, value, range, is_row=True):
-        all_values = cls.get_data_from_range(spreadsheet_id, range)
+    def get_table_index_of_value(cls, spreadsheet_id, value, range, is_row=True, strict=True):
+        all_values = cls.get_data_from_range(spreadsheet_id, range, use_cache=True)
 
         if is_row:
             all_values = all_values[0] if is_row else all_values
-            value_index = all_values.index(value)
-
-            return value_index
+            if strict:
+                index = all_values.index(value)
+                return index
+            else:
+                for index, data in enumerate(all_values):
+                    data = data.strip() if data else None
+                    if value in data:
+                        return index
 
         else:
             for index, table_row in enumerate(all_values):
 
                 data = table_row[0].strip() if table_row else None
-                if data == value:
-                    return index
+
+                if strict:
+                    if data == value:
+                        return index
+                elif data:
+                    if value in data:
+                        return index
