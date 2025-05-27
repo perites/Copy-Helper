@@ -42,6 +42,7 @@ class CliUI:
 
         menu_options = {
             'make-domain': cls.make_domain,
+            'md': cls.make_domain,
             'add-domain': cls.add_domain,
             # 'edit-domain':cls.edit_domain,
             'clear-cache': cls.clear_cache,
