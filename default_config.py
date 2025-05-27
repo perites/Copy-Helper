@@ -44,6 +44,7 @@ default_domain_settings = r'''{
   },
   "styles": {
     "antispam": true,
+    "addEsButton": false,
     "antispamReplacements": {
       "a": "а"
     },
