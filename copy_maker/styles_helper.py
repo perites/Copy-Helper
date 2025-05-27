@@ -17,7 +17,7 @@ class StylesHelper:
         if self.styles_settings['fontSize']:
             font_size = self.calculate_value(self.styles_settings['fontSize'])
 
-            copy.lift_html, success = self.replace_style(r'font-size\s*:\s*(16|18)?px;',
+            copy.lift_html, success = self.replace_style(r'font-size\s*:\s*(16|18|20)?px;',
                                                          f'font-size: {font_size};',
                                                          copy.lift_html)
 
