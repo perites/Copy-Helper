@@ -13,6 +13,8 @@ class StylesHelper:
 
         if self.styles_settings['antispam']:
             copy.lift_html = self.antispam_text(copy.lift_html, self.styles_settings['antispamReplacements'])
+            copy.lift_sls = self.antispam_text(copy.lift_sls, self.styles_settings['antispamReplacements'])
+
 
         if self.styles_settings['fontSize']:
             font_size = self.calculate_value(self.styles_settings['fontSize'])
@@ -185,11 +187,11 @@ class StylesHelper:
                 case '>':
                     inside_tag = False
 
-                case '&':
-                    inside_entity = True
+                # case '&':
+                #     inside_entity = True
 
-                case ';':
-                    inside_entity = False
+                # case ';':
+                #     inside_entity = False
 
             if (not inside_tag) and (not inside_entity) and replacements.get(char):
                 replaced_char = replacements.get(char)
