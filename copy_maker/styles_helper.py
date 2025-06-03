@@ -12,8 +12,11 @@ class StylesHelper:
     def apply_styles(self, copy):
 
         if self.styles_settings['antispam']:
-            copy.lift_html = self.antispam_text(copy.lift_html, self.styles_settings['antispamReplacements'])
-            copy.lift_sls = self.antispam_text(copy.lift_sls, self.styles_settings['antispamReplacements'])
+            if copy.lift_html:
+                copy.lift_html = self.antispam_text(copy.lift_html, self.styles_settings['antispamReplacements'])
+
+            if copy.lift_sls:
+                copy.lift_sls = self.antispam_text(copy.lift_sls, self.styles_settings['antispamReplacements'])
 
 
         if self.styles_settings['fontSize']:
