@@ -95,14 +95,15 @@ class CliUI:
 
         str_copies = str_copies.split(' ') if str_copies else None
         try:
-            make_domain_results = core.make_domain(domain_name, broadcast_date, cls.get_str_copies, str_copies)
+            domain_results = core.make_domain(domain_name, broadcast_date, cls.get_str_copies, str_copies)
         except Exception as e:
             logger.error(f'Error while making domain {domain_name}. Details: {e}')
             logger.debug(traceback.format_exc())
+            return
 
         questionary.print('======================')
         questionary.print(f'Finished making domain {domain_name} for date {broadcast_date}')
-        for results in make_domain_results:
+        for results in domain_results:
             questionary.print(results)
         questionary.print('======================')
 
