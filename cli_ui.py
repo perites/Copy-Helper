@@ -51,7 +51,10 @@ class CliUI:
             'exit': core.exit
         }
 
-        questionary.print(f'Avalible options: {", ".join(menu_options)}')
+        menu_options_to_show = menu_options.copy()
+        del menu_options_to_show['md']
+        questionary.print(f'Avalible options: {", ".join(menu_options_to_show)}')
+
         option = questionary.autocomplete(
             "Select an option:",
             choices=menu_options,
@@ -91,8 +94,11 @@ class CliUI:
             return
 
         str_copies = str_copies.split(' ') if str_copies else None
-
-        make_domain_results = core.make_domain(domain_name, broadcast_date, cls.get_str_copies, str_copies)
+        try:
+            make_domain_results = core.make_domain(domain_name, broadcast_date, cls.get_str_copies, str_copies)
+        except Exception as e:
+            logger.error(f'Error while making domain {domain_name}. Details: {e}')
+            logger.debug(traceback.format_exc())
 
         questionary.print('======================')
         questionary.print(f'Finished making domain {domain_name} for date {broadcast_date}')

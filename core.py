@@ -49,16 +49,20 @@ class Core:
         domains_folder = 'Domains/'
         domains = {}
         for name in os.listdir(domains_folder):
-            if name == 'DefaultDomain':
-                continue
+            try:
+                if name == 'DefaultDomain':
+                    continue
 
-            full_path = os.path.join(domains_folder, name)
-            if os.path.isdir(full_path):
-                domain_dict = json.load(open(full_path + '/settings.json'))
-                domain_dict['styles']['template'] = open(full_path + '/template.html').read()
-                domain = copy_maker.domain.Domain(domain_dict)
+                full_path = os.path.join(domains_folder, name)
+                if os.path.isdir(full_path):
+                    domain_dict = json.load(open(full_path + '/settings.json'))
+                    domain_dict['styles']['template'] = open(full_path + '/template.html').read()
+                    domain = copy_maker.domain.Domain(domain_dict)
 
-                domains[name] = domain
+                    domains[name] = domain
+            except Exception as e:
+                logger.error(f'Error parsing domain in folder "{name}"')
+                logger.debug(traceback.format_exc())
 
         return domains
 
@@ -253,7 +257,7 @@ class Core:
             custom_sls_block = ''
 
         copy_sls = (
-                copy.str_rep + suffix + '\n\n' +
+                copy.str_rep + suffix + f' | images : {len(copy.lift_images)}' + '\n\n' +
 
                 f'Tracking link:\n{copy.tracking_link}\n\n' +
                 unsub_url_str +
