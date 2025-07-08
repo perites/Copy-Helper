@@ -42,7 +42,9 @@ class CliUI:
 
         menu_options = {
             'make-domain': cls.make_domain,
+            'make-all': cls.make_all,
             'md': cls.make_domain,
+            'ma': cls.make_all,
             'add-domain': cls.add_domain,
             # 'edit-domain':cls.edit_domain,
             'clear-cache': cls.clear_cache,
@@ -53,6 +55,7 @@ class CliUI:
 
         menu_options_to_show = menu_options.copy()
         del menu_options_to_show['md']
+        del menu_options_to_show['ma']
         questionary.print(f'Avalible options: {", ".join(menu_options_to_show)}')
 
         option = questionary.autocomplete(
@@ -68,6 +71,37 @@ class CliUI:
 
         if option_fun:
             option_fun()
+
+    @classmethod
+    def make_all(cls):
+        broadcast_date = questionary.text("Enter broadcast date:",
+                                          default=f"{datetime.today().month}/{datetime.today().day}").ask().strip()
+        if broadcast_date == 'back':
+            return
+
+        questionary.print(f'Staring making all domains : {", ".join(sorted(core.domains))}')
+
+        domains_results = []
+        for domain_name in core.domains:
+            questionary.print(f'Making domain: {domain_name}')
+            try:
+                domain_results = core.make_domain(domain_name, broadcast_date, cls.get_str_copies, str_copies=None)
+            except Exception as e:
+                logger.error(f'Error while making domain {domain_name}. Details: {e}')
+                logger.debug(traceback.format_exc())
+                continue
+
+            domains_results.append({'name': domain_name, 'results': domain_results})
+            questionary.print(f'Finished making domain {domain_name} for date {broadcast_date}')
+
+        questionary.print('======================')
+        questionary.print('Finished making all domains')
+        for domain_results in domains_results:
+            questionary.print(f'Results for domain: {domain_results['name']}')
+            for results in domain_results['results']:
+                questionary.print(results)
+
+        questionary.print('======================')
 
     @classmethod
     def make_domain(cls):
