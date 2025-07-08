@@ -82,7 +82,7 @@ class CliUI:
         questionary.print(f'Staring making all domains : {", ".join(sorted(core.domains))}')
 
         domains_results = []
-        for domain_name in core.domains:
+        for domain_name in sorted(core.domains):
             questionary.print(f'Making domain: {domain_name}')
             try:
                 domain_results = core.make_domain(domain_name, broadcast_date, cls.get_str_copies, str_copies=None)
@@ -100,6 +100,7 @@ class CliUI:
             questionary.print(f'Results for domain: {domain_results['name']}')
             for results in domain_results['results']:
                 questionary.print(results)
+            questionary.print('\n')
 
         questionary.print('======================')
 
