@@ -294,13 +294,15 @@ class Offer:
         priority_product_index += 1
 
         text_value = google_services.GoogleSheets.get_data_from_range(
-            tableID, f'{priority_product_page}!{text_column}{priority_product_index}')[0][0]
+            tableID, f'{priority_product_page}!{text_column}{priority_product_index}')
 
         if text_value:
             logger.info(f'Priority footer was found for {self.name}')
+            text_value = text_value[0][0]
         else:
             logger.debug(f'Priority footer not found for {self.name}')
-
+            text_value = ''
+        
         unsub_url = google_services.GoogleSheets.get_data_from_range(
             tableID, f'{priority_product_page}!{link_column}{priority_product_index}')
 
