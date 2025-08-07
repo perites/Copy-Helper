@@ -6,6 +6,7 @@ from openpyxl.utils import get_column_letter
 
 from . import google_services
 from . import secrets
+from .crypto_all_products_types import crypto_all_products_types
 from .offer import Offer
 
 logger = logging.getLogger(__name__)
@@ -110,11 +111,29 @@ class Domain:
 
         link_body = self.products['trackingLink']['template']
         tracking_link = link_body.replace('[TRACKING_ID]', tracking_id)
+
+        send_type = self.get_send_type(copy)
+        tracking_link = tracking_link.replace('[SEND_TYPE]', send_type)
+
         tracking_link = tracking_link.replace('[END]', link_end)
 
         copy.tracking_link = tracking_link
 
         return copy
+
+    @classmethod
+    def get_send_type(cls, copy):
+        if not copy.offer_name.startswith('CO'):
+            logger.debug('Using regular type')
+            return 'B'
+
+        crypto_product_types = crypto_all_products_types.get(copy.offer_name)
+
+        if not crypto_product_types:
+            logger.warning(f'{copy.offer_name} does not has according type, using regular type "B"')
+            return 'B'
+
+        return str(crypto_product_types.get(int(copy.lift_number), 'DeadEmail'))
 
     def make_unsub_link(self, copy):
         if not copy.priority_info['unsub_id']:
