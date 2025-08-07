@@ -18,7 +18,6 @@ class StylesHelper:
             if copy.lift_sls:
                 copy.lift_sls = self.antispam_text(copy.lift_sls, self.styles_settings['antispamReplacements'])
 
-
         if self.styles_settings['fontSize']:
             font_size = self.calculate_value(self.styles_settings['fontSize'])
 
@@ -35,6 +34,12 @@ class StylesHelper:
                                                          copy.lift_html)
             if not success:
                 copy.lift_html = copy.lift_html.replace('Roboto', self.styles_settings['fontFamily'])
+
+        if self.styles_settings.get('copyWidth'):
+            copy_width = self.calculate_value(self.styles_settings['copyWidth'])
+            copy.lift_html, success = self.replace_style(r'width\s*:\s*600\s*px', f'width:{copy_width}', copy.lift_html)
+            if not success:
+                logger.warning('Copy width was not changed')
 
         if self.styles_settings['sideElementsPadding'] and self.styles_settings['upperDownElementsPadding']:
             upper_down_elements_padding = self.calculate_value(self.styles_settings['upperDownElementsPadding'])
