@@ -93,6 +93,7 @@ class CliUI:
 
             domains_results.append({'name': domain_name, 'results': domain_results})
             questionary.print(f'Finished making domain {domain_name} for date {broadcast_date}')
+            questionary.print('\n')
 
         questionary.print('======================')
         questionary.print('Finished making all domains')
@@ -100,6 +101,7 @@ class CliUI:
             questionary.print(f'Results for domain: {domain_results['name']}')
             for results in domain_results['results']:
                 questionary.print(results)
+                
             questionary.print('\n')
 
         questionary.print('======================')
