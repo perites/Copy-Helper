@@ -3,14 +3,11 @@ default_general_settings = r'''
     "ResultsDirectory": "",
     "ResultsDirectoryType": "Domain-Date",
     "ImagesDirectory": "",
-    "SaveImages": false
-}
-'''
-
-default_secret_file = r'''
-{
-    "MONDAY_TOKEN": "",
-    "OAUTH_CLIENT": ""
+    "SaveImages": false,
+    "Secrets": {
+        "MONDAY_TOKEN": "",
+        "OAUTH_CLIENT": ""
+    }
 }
 '''
 

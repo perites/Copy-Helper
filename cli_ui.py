@@ -181,7 +181,7 @@ class CliUI:
     #     if domain_name=='back':
     #         return
 
-    #     options = dict_to_tree_string(json.load(open(f'Domains/{domain_name}/settings.json')))
+    #     options = dict_to_tree_string(json.load(open(f'Domains/{domain_name}/local_files_helper.json')))
 
     #     selected = questionary.select(
     #         "Select an item from the tree:",
@@ -205,7 +205,7 @@ class CliUI:
     #     if domain_name=='back':
     #         return
 
-    #     dict_obj = json.load(open(f'Domains/{domain_name}/settings.json'))
+    #     dict_obj = json.load(open(f'Domains/{domain_name}/local_files_helper.json'))
 
     #     new_domain = cls.edit_dict(dict_obj)
 

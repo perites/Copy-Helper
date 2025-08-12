@@ -8,7 +8,7 @@ from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 
-import secrets
+from .secrets import secrets
 
 logger = logging.getLogger(__name__)
 
@@ -21,8 +21,8 @@ class ServicesHelper:
 
         scopes = ['https://www.googleapis.com/auth/drive', 'https://www.googleapis.com/auth/spreadsheets.readonly']
 
-        if secrets.CREDENTIALS:
-            creds = Credentials.from_authorized_user_info(secrets.CREDENTIALS, scopes)
+        if secrets.credentials:
+            creds = Credentials.from_authorized_user_info(secrets.credentials, scopes)
 
         if creds:
             if creds.valid:
@@ -31,13 +31,13 @@ class ServicesHelper:
             elif creds.expired and creds.refresh_token:
                 creds.refresh(Request())
 
-                secrets.update_credentials(json.loads(creds.to_json()))
+                secrets.callable_update_credentials(json.loads(creds.to_json()))
                 return creds
 
-        flow = InstalledAppFlow.from_client_config(secrets.OAUTH_CLIENT, scopes)
+        flow = InstalledAppFlow.from_client_config(secrets.oauth_client, scopes)
         creds = flow.run_local_server(port=0)
 
-        secrets.update_credentials(json.loads(creds.to_json()))
+        secrets.callable_update_credentials(json.loads(creds.to_json()))
 
         return creds
 
