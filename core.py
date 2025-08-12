@@ -8,7 +8,7 @@ import traceback
 import requests
 from PIL import Image
 
-import copy_maker
+import copy_maker_core
 import default_config
 
 logger = logging.getLogger(__name__)
@@ -19,7 +19,6 @@ class Core:
         self.check_paths()
 
         self.settings = json.load(open('GeneralSettings.json'))
-        self.custom_sls = json.load(open('custom_sls.json'))
         self.domains = self.get_domains()
 
     @staticmethod
@@ -28,10 +27,6 @@ class Core:
             open('GeneralSettings.json', 'w').write(default_config.default_general_settings)
             logger.error('Fill general settings!')
             exit()
-
-        if not os.path.exists('custom_sls.json'):
-            open('custom_sls.json', 'w').write('{}')
-            logger.debug('Custom sls file created')
 
         os.makedirs('Domains/DefaultDomain', exist_ok=True)
         if not os.path.exists('Domains/DefaultDomain/settings.json'):
@@ -57,7 +52,7 @@ class Core:
                 if os.path.isdir(full_path):
                     domain_dict = json.load(open(full_path + '/settings.json'))
                     domain_dict['styles']['template'] = open(full_path + '/template.html').read()
-                    domain = copy_maker.domain.Domain(domain_dict)
+                    domain = copy_maker_core.domain.Domain(domain_dict)
 
                     domains[name] = domain
             except Exception as e:
@@ -77,7 +72,7 @@ class Core:
 
     @staticmethod
     def clear_cache(option):
-        copy_maker.offer.OffersCache.clear_cache(option)
+        copy_maker_core.offer.OffersCache.clear_cache(option)
 
     @staticmethod
     def create_new_domain(domain_name):
@@ -183,7 +178,7 @@ class Core:
         copy = domain.make_unsub_link(copy)
         copy = domain.process_images(copy)
 
-        styles_helper = copy_maker.styles_helper.StylesHelper(domain.styles)
+        styles_helper = copy_maker_core.styles_helper.StylesHelper(domain.styles)
         copy = styles_helper.apply_styles(copy)
         copy = styles_helper.add_template(copy)
 
@@ -205,8 +200,6 @@ class Core:
     def save_copy(self, copy, domain_bc_name, date, path_to_domain_results):
         self.save_lift_file(copy, path_to_domain_results)
 
-        if custom_sls := (self.custom_sls.get(copy.offer_name)):
-            copy.custom_sls = custom_sls
         self.save_sl_file(copy, domain_bc_name, date, path_to_domain_results)
 
         save_image_path = self.settings['ImagesDirectory'] + f'{date}/'

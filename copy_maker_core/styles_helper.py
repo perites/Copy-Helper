@@ -6,38 +6,31 @@ logger = logging.getLogger(__name__)
 
 
 class StylesHelper:
-    def __init__(self, styles_settings):
+    def __init__(self, lift_html, lift_sls, styles_settings):
+        self.lift_html = lift_html
+        self.lift_sls = lift_sls
         self.styles_settings = styles_settings
 
-    def apply_styles(self, copy):
-
-        if self.styles_settings['antispam']:
-            if copy.lift_html:
-                copy.lift_html = self.antispam_text(copy.lift_html, self.styles_settings['antispamReplacements'])
-
-            if copy.lift_sls:
-                copy.lift_sls = self.antispam_text(copy.lift_sls, self.styles_settings['antispamReplacements'])
-
+    def apply_styles(self):
         if self.styles_settings['fontSize']:
             font_size = self.calculate_value(self.styles_settings['fontSize'])
 
-            copy.lift_html, success = self.replace_style(r'font-size\s*:\s*(16|18|20)?px;',
-                                                         f'font-size: {font_size};',
-                                                         copy.lift_html)
+            self.lift_html, success = self.replace_style(r'font-size\s*:\s*(16|18|20)?px;',
+                                                         f'font-size: {font_size};', self.lift_html)
 
         if self.styles_settings['fontFamily']:
 
             font_family = self.calculate_value(self.styles_settings['fontFamily'])
 
-            copy.lift_html, success = self.replace_style(r'font-family\s*:\s*([^;]+);?',
+            self.lift_html, success = self.replace_style(r'font-family\s*:\s*([^;]+);?',
                                                          f'font-family:{font_family};',
-                                                         copy.lift_html)
+                                                         self.lift_html)
             if not success:
-                copy.lift_html = copy.lift_html.replace('Roboto', self.styles_settings['fontFamily'])
+                self.lift_html = self.lift_html.replace('Roboto', self.styles_settings['fontFamily'])
 
         if self.styles_settings.get('copyWidth'):
             copy_width = self.calculate_value(self.styles_settings['copyWidth'])
-            copy.lift_html, success = self.replace_style(r'width\s*:\s*600\s*px', f'width:{copy_width}', copy.lift_html)
+            self.lift_html, success = self.replace_style(r'width\s*:\s*600\s*px', f'width:{copy_width}', self.lift_html)
             if not success:
                 logger.warning('Copy width was not changed')
 
@@ -45,35 +38,33 @@ class StylesHelper:
             upper_down_elements_padding = self.calculate_value(self.styles_settings['upperDownElementsPadding'])
             side_elements_padding = self.calculate_value(self.styles_settings['sideElementsPadding'])
 
-            copy.lift_html, success = self.replace_style(r'padding\s*:\s*10px\s+25px',
+            self.lift_html, success = self.replace_style(r'padding\s*:\s*10px\s+25px',
                                                          f'padding:{upper_down_elements_padding} {side_elements_padding}',
-                                                         copy.lift_html)
+                                                         self.lift_html)
 
             if not success:
-                copy.lift_html, success = self.replace_style(r'padding-left\s*:\s*([^;"]+)',
+                self.lift_html, success = self.replace_style(r'padding-left\s*:\s*([^;"]+)',
                                                              f'padding-left:{side_elements_padding}',
-                                                             copy.lift_html)
-                copy.lift_html, success = self.replace_style(r'padding-right\s*:\s*([^;"]+)',
+                                                             self.lift_html)
+                self.lift_html, success = self.replace_style(r'padding-right\s*:\s*([^;"]+)',
                                                              f'padding-right:{side_elements_padding}',
-                                                             copy.lift_html)
+                                                             self.lift_html)
 
         if self.styles_settings['upperDownCopyPadding']:
             upper_down_copy_padding = self.calculate_value(self.styles_settings['upperDownCopyPadding'])
 
-            copy.lift_html, success = self.replace_style(r'padding\s*:\s*(10|20)px\s+0(px|)',
-                                                         f'padding:{upper_down_copy_padding} 0', copy.lift_html)
+            self.lift_html, success = self.replace_style(r'padding\s*:\s*(10|20)px\s+0(px|)',
+                                                         f'padding:{upper_down_copy_padding} 0', self.lift_html)
 
         if self.styles_settings['lineHeight']:
             line_height = self.calculate_value(self.styles_settings['lineHeight'])
-            copy.lift_html, success = self.replace_style(r'line-height\s*:\s*1.5', f'line-height:{line_height}',
-                                                         copy.lift_html)
+            self.lift_html, success = self.replace_style(r'line-height\s*:\s*1.5', f'line-height:{line_height}',
+                                                         self.lift_html)
 
         links_color = self.styles_settings['linksColor'] if self.styles_settings[
                                                                 'linksColor'] != 'random-blue' else self.get_random_blue()
         add_es_button = self.styles_settings['addEsButton']
-        copy.lift_html = self.change_links(copy.lift_html, links_color, add_es_button)
-
-        return copy
+        self.lift_html = self.change_links(self.lift_html, links_color, add_es_button)
 
     @staticmethod
     def get_random_blue():
@@ -154,6 +145,14 @@ class StylesHelper:
         new_a_tag = a_tag.replace(old_link_style, new_link_style)
         return new_a_tag
 
+    def antispam_copy(self):
+        if self.styles_settings['antispam']:
+            if self.lift_html:
+                self.lift_html = self.antispam_text(self.lift_html, self.styles_settings['antispamReplacements'])
+
+            if self.lift_sls:
+                self.lift_sls = self.antispam_text(self.lift_sls, self.styles_settings['antispamReplacements'])
+
     @staticmethod
     def antispam_text(text, custom_replacements):
 
@@ -210,6 +209,32 @@ class StylesHelper:
 
         return new_text
 
+    def process_images(self, img_code, str_rep):
+        src_part_pattern = r'src="[^"]*'
+        images_urls = []
+        src_list = re.findall(src_part_pattern, self.lift_html)
+        if len(src_list) == 0:
+            if img_code:
+                logger.debug('Copy has img code and doesnt contain images')
+                logger.info(f'Adding image block to copy {str_rep}')
+                self.lift_html = self.lift_html.replace('<br><br>',
+                                                        f'<!-- image-block-start -->{self.styles_settings['imageBlock']}<!-- image-block-end -->',
+                                                        1)
+
+                return
+
+            else:
+                logger.debug('No images no image code, doing nothing')
+                return
+
+        logger.info(f'Found {len(src_list)} images')
+        for index, src_part in enumerate(src_list):
+            img_url = src_part.split('"')[1]
+            if img_url not in images_urls:
+                images_urls.append(img_url)
+
+        return images_urls
+
     def make_priority_footer_html(self, footer_text, url):
         footer_link_keywords = [
             'edit your e-mail notification preferences or unsubscribe',
@@ -238,12 +263,12 @@ class StylesHelper:
         footer_text += f'\n\nUNSUB-URL: {url}'
         return footer_text
 
-    def add_template(self, copy):
+    def add_template(self, priority_info):
         template = self.styles_settings['template']
 
-        if copy.priority_info['is_priority']:
-            priority_body = self.make_priority_footer_html(copy.priority_info['unsub_text'],
-                                                           copy.priority_info['unsub_link'])
+        if priority_info['is_priority']:
+            priority_body = self.make_priority_footer_html(priority_info['unsub_text'],
+                                                           priority_info['unsub_link'])
 
             priority_block = self.styles_settings['priorityBlock'].replace('[PRIORITY_BODY]', priority_body)
 
@@ -251,11 +276,9 @@ class StylesHelper:
             priority_block = ''
 
         if not template:
-            return copy.lift_html + '<br><br><br><br><br>' + priority_block
+            return self.lift_html + '<br><br><br><br><br>' + priority_block
 
-        template = template.replace('[COPY_HERE]', copy.lift_html)
+        template = template.replace('[COPY_HERE]', self.lift_html)
         template = template.replace('[PRIORITY_FOOTER_HERE]', priority_block)
 
-        copy.lift_html = template
-
-        return copy
+        self.lift_html = template

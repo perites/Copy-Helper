@@ -1,5 +1,8 @@
 import json
 import logging
+import os
+
+import default_config
 
 logger = logging.getLogger(__name__)
 
@@ -22,7 +25,13 @@ def write_json_file(path, data):
         json.dump(data, file, indent=4)
 
 
-PATH_TO_SECRETS_FILE = 'copy_maker/secrets.json'
+PATH_TO_SECRETS_FILE = 'secrets.json'
+
+if not os.path.exists('PATH_TO_SECRETS_FILE'):
+    open('secrets.json', 'w').write(default_config.default_secret_file)
+    logging.warning('Fill secrets file!')
+    exit()
+
 secrets = read_json_file(PATH_TO_SECRETS_FILE)
 
 OAUTH_CLIENT = secrets['OAUTH_CLIENT']

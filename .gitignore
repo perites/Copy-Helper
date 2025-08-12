@@ -1,5 +1,5 @@
 /main-log.log
-/copy_maker/offers_info_cache.json
-/copy_maker/secrets.json
+/copy_maker_core/offers_info_cache.json
+/secrets.json
 /Domains/
 /GeneralSettings.json
