@@ -18,7 +18,6 @@ class StylesHelper:
             if copy.lift_sls:
                 copy.lift_sls = self.antispam_text(copy.lift_sls, self.styles_settings['antispamReplacements'])
 
-
         if self.styles_settings['fontSize']:
             font_size = self.calculate_value(self.styles_settings['fontSize'])
 
@@ -173,16 +172,19 @@ class StylesHelper:
             "x": "х",
             "c": "с",
             "%": "％",
-            "$": "＄"
+            "$": "＄",
+            "&#36;": "＄"
         }
 
         replacements = {**replacements, **custom_replacements}
 
         new_text = ''
         inside_tag = False
-        inside_entity = False
-        for char in text:
+        inside_str_emoji = False
+        str_emoji = ''
+        fake_str_emoji = ''
 
+        for char in text:
             match char:
                 case '<':
                     inside_tag = True
@@ -190,18 +192,39 @@ class StylesHelper:
                 case '>':
                     inside_tag = False
 
-                # case '&':
-                #     inside_entity = True
+                case '&':
+                    if inside_str_emoji:
+                        new_text += fake_str_emoji
+                        str_emoji = ''
+                        fake_str_emoji = ''
 
-                # case ';':
-                #     inside_entity = False
+                    inside_str_emoji = True
 
-            if (not inside_tag) and (not inside_entity) and replacements.get(char):
-                replaced_char = replacements.get(char)
+                case ';':
+                    inside_str_emoji = False
+                    str_emoji += char
+                    fake_str_emoji += replacements.get(char) or char
+                    replaced_char = replacements.get(str_emoji)
+                    new_text += replaced_char or fake_str_emoji
+
+                    str_emoji = ''
+                    fake_str_emoji = ''
+                    continue
+
+            if inside_str_emoji:
+                str_emoji += char
+                fake_str_emoji += replacements.get(char) or char
+                continue
+
+            if (not inside_tag) and (not inside_str_emoji):
+                replaced_char = replacements.get(char) or char
             else:
                 replaced_char = char
 
             new_text += replaced_char
+
+        if inside_str_emoji:
+            new_text += fake_str_emoji
 
         return new_text
 
