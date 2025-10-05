@@ -124,7 +124,8 @@ class Offer:
             "AHTT": 8753520275,
             "CONO": 7101745053,
             "AHTG": 8721191855,
-            "BIGG": 7654340357
+            "BIGG": 7654340357,
+            "IAL": 1056026291
         }
 
         item_id = WRONG_OFFERS.get(self.name)
@@ -302,7 +303,7 @@ class Offer:
         else:
             logger.debug(f'Priority footer not found for {self.name}')
             text_value = ''
-        
+
         unsub_url = google_services.GoogleSheets.get_data_from_range(
             tableID, f'{priority_product_page}!{link_column}{priority_product_index}')
 

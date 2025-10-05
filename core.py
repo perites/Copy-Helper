@@ -80,7 +80,7 @@ class Core:
         copy_maker.offer.OffersCache.clear_cache(option)
 
     @staticmethod
-    def create_new_domain(domain_name):
+    def create_new_domain(domain_name, template_domain_name=None):
         if not domain_name:
             logger.warning('Domain Name cant be empty')
             return
@@ -93,8 +93,13 @@ class Core:
             logger.warning('Domain must have unique name')
             return
 
-        shutil.copy('Domains/DefaultDomain/settings.json', domain_folder_path)
-        shutil.copy('Domains/DefaultDomain/template.html', domain_folder_path)
+        if template_domain_name:
+            shutil.copy(f'Domains/{template_domain_name}/settings.json', domain_folder_path)
+            shutil.copy(f'Domains/{template_domain_name}/template.html', domain_folder_path)
+
+        else:
+            shutil.copy('Domains/DefaultDomain/settings.json', domain_folder_path)
+            shutil.copy('Domains/DefaultDomain/template.html', domain_folder_path)
 
     def make_domain(self, domain_name, broadcast_date, get_copies_manually_callback, str_copies=None):
         domain = self.get_domain(domain_name)

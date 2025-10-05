@@ -101,7 +101,7 @@ class CliUI:
             questionary.print(f'Results for domain: {domain_results['name']}')
             for results in domain_results['results']:
                 questionary.print(results)
-                
+
             questionary.print('\n')
 
         questionary.print('======================')
@@ -173,10 +173,23 @@ class CliUI:
 
     @classmethod
     def add_domain(cls):
-        domain_name = questionary.text("Enter new domain name:").ask().strip()
-        if domain_name == 'back':
+        new_domain_name = questionary.text("Enter new domain name:").ask().strip()
+        if new_domain_name == 'back':
             return
-        core.create_new_domain(domain_name)
+
+        questionary.print(f'Choose domain to copy from : {", ".join(sorted(core.domains))}')
+        choices = {**core.domains, 'back': '', '': ''}
+        template_domain_name = questionary.autocomplete("Template domain:",
+                                                        choices=choices,
+                                                        validate=lambda val: val in choices,
+                                                        ignore_case=True,
+                                                        match_middle=False,
+                                                        style=cls.autocomplete_style).ask()
+
+        if template_domain_name == 'back':
+            return
+
+        core.create_new_domain(new_domain_name, template_domain_name)
 
     @classmethod
     def clear_cache(cls):
