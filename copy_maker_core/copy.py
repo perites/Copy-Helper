@@ -34,7 +34,6 @@ class Copy:
 
     def results(self):
         return {
-            'str_rep': self.str_rep,
             'html': self.html_found,
             'sl': bool(self.lift_sls),
             'pfooter': bool(self.offer.priority_info['unsub_text']),

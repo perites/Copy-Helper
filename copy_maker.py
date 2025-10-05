@@ -1,6 +1,7 @@
 import logging
 
-import cli_ui
+from copy_maker_core import Core
+from copy_maker_local_ui import CliUI
 
 
 def configure_logging():
@@ -32,5 +33,5 @@ def configure_logging():
 
 if __name__ == "__main__":
     configure_logging()
-
-    cli_ui.CliUI().start()
+    core = Core()
+    CliUI(core).start()

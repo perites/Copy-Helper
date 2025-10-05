@@ -7,26 +7,24 @@ from datetime import datetime
 import questionary
 from prompt_toolkit.styles import Style
 
-from core import core
-from local_files_helper import LocalFilesHelper
+from .files_helper import LocalFilesHelper
 
 logger = logging.getLogger(__name__)
 
 
 class CliUI:
-
-    def __init__(self):
+    def __init__(self, core):
         self.autocomplete_style = Style.from_dict({
             "completion-menu.completion": "bg:#444444 ansiwhite",
             "scrollbar.background": "bg:black",
             "scrollbar.button": "bg:black",
             "prompt": "bold ansiwhite",
         })
-
+        self.core = core
         self.settings = LocalFilesHelper.sh.settings
         self.domains = LocalFilesHelper.dh.domains_dicts
 
-        core.set_secrets(
+        self.core.set_secrets(
             self.settings['Secrets']['OAUTH_CLIENT'],
             self.settings['Secrets']['MONDAY_TOKEN'],
             self.settings['Secrets'].get('CREDENTIALS'),
@@ -47,7 +45,7 @@ class CliUI:
                     choices=['exit'], ignore_case=True,
                     match_middle=True, style=self.autocomplete_style).ask().strip().lower()
                 if retry == 'exit':
-                    core.exit()
+                    self.core.exit()
 
     def main_cycle(self):
 
@@ -58,13 +56,13 @@ class CliUI:
             # 'edit-domain':cls.edit_domain,
             'clear-cache': self.clear_cache,
             'clear': self.clear_console,
-            'restart': core.restart_script,
-            'exit': core.exit
+            'restart': self.core.restart_script,
+            'exit': self.core.exit
         }
 
         menu_options_to_show = menu_options.copy()
         del menu_options_to_show['md']
-        questionary.print(f'Avalible options: {", ".join(menu_options_to_show)}')
+        questionary.print(f'Available options: {", ".join(menu_options_to_show)}')
 
         option = questionary.autocomplete(
             "Select an option:",
@@ -91,7 +89,7 @@ class CliUI:
         try:
             manual_lifts_htmls = LocalFilesHelper.dh.get_lifts_htmls(str_copies, domain_bc_name, date)
 
-            copies = core.make_domain(domain_dict, broadcast_date, str_copies, manual_lifts_htmls)
+            copies = self.core.make_domain(domain_dict, broadcast_date, str_copies, manual_lifts_htmls)
             max_len_str_copy = self.calc_max_len_str_copy(copies)
             for copy in copies:
                 LocalFilesHelper.save_copy(copy, domain_bc_name, date)
@@ -152,7 +150,7 @@ class CliUI:
         copy_results = " | ".join(
             [f'{name} : {'+' if raw_result else '-'}' for name, raw_result in copy.results().items()])
 
-        results = f'{warning_message}{str_rep_padding} : {copy_results} img {len(copy.lift_images)}'
+        results = f'{warning_message}{str_rep_padding} : {copy_results} | img {len(copy.lift_images)}'
 
         return results
 
@@ -162,7 +160,7 @@ class CliUI:
             return
 
         questionary.print(f'Choose domain to copy from : {", ".join(sorted(self.domains))}')
-        choices = {**core.domains, 'back': '', '': ''}
+        choices = {**self.domains, 'back': '', '': ''}
         template_domain_name = questionary.autocomplete("Template domain:",
                                                         choices=list(choices.keys()),
                                                         validate=lambda val: val in choices,
@@ -175,12 +173,11 @@ class CliUI:
 
         LocalFilesHelper.dh.create_new_domain(new_domain_name, template_domain_name)
 
-    @classmethod
-    def clear_cache(cls):
+    def clear_cache(self):
         option = questionary.text("Specify offer to clear cache:").ask().strip()
         if option == 'back':
             return
-        core.clear_cache(option)
+        self.core.clear_cache(option)
 
     @staticmethod
     def clear_console():
@@ -189,84 +186,3 @@ class CliUI:
             os.system('cls')
         else:
             print("\033[H\033[J\033[3J", end="", flush=True)
-
-    # @classmethod
-    # def edit_domain(cls):
-    #     def dict_to_tree_string(d, indent=0):
-    #         tree_strings = []
-    #         for key, value in d.items():
-    #             tree_strings.append("  " * indent + str(key))
-    #             if isinstance(value, dict):
-    #                 tree_strings.extend(dict_to_tree_string(value, indent + 1))
-    #             else:
-    #                 tree_strings.append("  " * (indent + 1) + str(value))
-    #         return tree_strings
-
-    #     questionary.print(f'Domains : {", ".join(sorted(core.domains))}')
-
-    #     choices = {**core.domains, 'back': ''}
-    #     domain_name = questionary.autocomplete("Choose domain:",
-    #         choices=choices,
-    #         validate=lambda val: val in choices,
-    #         ignore_case=True,
-    #         match_middle=False,
-    #         style=cls.autocomplete_style).ask()
-
-    #     if domain_name=='back':
-    #         return
-
-    #     options = dict_to_tree_string(json.load(open(f'Domains/{domain_name}/local_files_helper.json')))
-
-    #     selected = questionary.select(
-    #         "Select an item from the tree:",
-    #         choices=options
-    #     ).ask()
-
-    #     print(f"You selected: {selected}")
-
-    # @classmethod
-    # def edit_domain(cls):
-    #     questionary.print(f'Domains : {", ".join(sorted(core.domains))}')
-
-    #     choices = {**core.domains, 'back': ''}
-    #     domain_name = questionary.autocomplete("Choose domain:",
-    #         choices=choices,
-    #         validate=lambda val: val in choices,
-    #         ignore_case=True,
-    #         match_middle=False,
-    #         style=cls.autocomplete_style).ask()
-
-    #     if domain_name=='back':
-    #         return
-
-    #     dict_obj = json.load(open(f'Domains/{domain_name}/local_files_helper.json'))
-
-    #     new_domain = cls.edit_dict(dict_obj)
-
-    #     print(new_domain)
-
-    # @classmethod
-    # def edit_dict(cls, dict_obj):
-
-    #      #list(fil(dict_obj.keys()))
-    #     choices = []
-    #     for k, v in dict_obj.items():
-    #         if isinstance(v, dict):
-    #             choices.append(k)
-    #         else:
-    #             choices.append(f'{k} : {v}')
-
-    #     answer = questionary.select("Select a key to edit", choices=choices).ask()
-    #     key = answer.split(' : ')[0]
-
-    #     # key = questionary.select("Select a key to edit", choices=dict_obj).ask()
-    #     value = dict_obj[key]
-    #     if isinstance(value, dict):
-    #         # Recursive editing
-    #         dict_obj[key] = cls.edit_dict(dict_obj[key])
-    #     else:
-    #         questionary.print(f"Enter new value for {key}, currently: {value}")
-    #         new_val = questionary.text('New value:').ask().strip()
-    #         dict_obj[key] = new_val
-
-    #     return dict_obj
