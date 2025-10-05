@@ -8,7 +8,7 @@ from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 
-from . import secrets
+from .secrets import Secrets
 
 logger = logging.getLogger(__name__)
 
@@ -21,8 +21,8 @@ class ServicesHelper:
 
         scopes = ['https://www.googleapis.com/auth/drive', 'https://www.googleapis.com/auth/spreadsheets.readonly']
 
-        if secrets.CREDENTIALS:
-            creds = Credentials.from_authorized_user_info(secrets.CREDENTIALS, scopes)
+        if Secrets.credentials:
+            creds = Credentials.from_authorized_user_info(Secrets.credentials, scopes)
 
         if creds:
             if creds.valid:
@@ -31,19 +31,28 @@ class ServicesHelper:
             elif creds.expired and creds.refresh_token:
                 creds.refresh(Request())
 
-                secrets.update_credentials(json.loads(creds.to_json()))
+                Secrets.callable_update_credentials(json.loads(creds.to_json()))
                 return creds
 
-        flow = InstalledAppFlow.from_client_config(secrets.OAUTH_CLIENT, scopes)
+        flow = InstalledAppFlow.from_client_config(Secrets.oauth_client, scopes)
         creds = flow.run_local_server(port=0)
 
-        secrets.update_credentials(json.loads(creds.to_json()))
+        Secrets.callable_update_credentials(json.loads(creds.to_json()))
 
         return creds
 
+    @staticmethod
+    def build_services():
+        GoogleDrive.build()
+        GoogleSheets.build()
+
 
 class GoogleDrive:
-    drive_service = build('drive', 'v3', credentials=ServicesHelper.get_credentials(), cache_discovery=False)
+    drive_service = None
+
+    @classmethod
+    def build(cls):
+        cls.drive_service = build('drive', 'v3', credentials=ServicesHelper.get_credentials(), cache_discovery=False)
 
     @classmethod
     def execute_query(cls, query, fields='files(id, name)'):
@@ -60,6 +69,7 @@ class GoogleDrive:
 
         query = f"{name_part}'{folder_name}' and mimeType='application/vnd.google-apps.folder' and trashed=false and '{parent_folder_id}' in parents"
         folders = cls.execute_query(query)
+        
         if folders:
             return folders[0]
         else:
@@ -120,8 +130,12 @@ class GoogleDrive:
 
 
 class GoogleSheets:
-    sheet_service = build('sheets', 'v4', credentials=ServicesHelper.get_credentials(), cache_discovery=False)
+    sheet_service = None
     cache = {}
+
+    @classmethod
+    def build(cls):
+        cls.sheet_service = build('sheets', 'v4', credentials=ServicesHelper.get_credentials(), cache_discovery=False)
 
     @classmethod
     def get_new_data_from_range(cls, spreadsheet_id, range):

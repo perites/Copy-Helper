@@ -1,12 +1,15 @@
 import logging
 
-datefmt = '%d-%m %H:%M:%S'
-
-console_format = '[%(levelname)s] : %(message)s'
-file_format = '%(asctime)s [%(levelname)s] : %(message)s | %(name)s'
+from copy_maker_core import Core
+from copy_maker_local_ui import CliUI
 
 
 def configure_logging():
+    datefmt = '%d-%m %H:%M:%S'
+
+    console_format = '[%(levelname)s] : %(message)s'
+    file_format = '%(asctime)s [%(levelname)s] : %(message)s | %(name)s'
+
     console_handler = logging.StreamHandler()
     console_handler.setLevel(logging.INFO)
 
@@ -26,3 +29,9 @@ def configure_logging():
     logging.getLogger('requests').setLevel(logging.WARNING)
     logging.getLogger('urllib3').setLevel(logging.WARNING)
     logging.getLogger('asyncio').setLevel(logging.WARNING)
+
+
+if __name__ == "__main__":
+    configure_logging()
+    core = Core()
+    CliUI(core).start()
