@@ -50,8 +50,10 @@ class CliUI:
     def main_cycle(self):
 
         menu_options = {
-            'make-domain': self.make_domain,
-            'md': self.make_domain,
+            'make-domain': self.make_one_domain,
+            'make-all': self.make_all,
+            'md': self.make_one_domain,
+            'ma': self.make_all,
             'add-domain': self.add_domain,
             # 'edit-domain':cls.edit_domain,
             'clear-cache': self.clear_cache,
@@ -62,6 +64,8 @@ class CliUI:
 
         menu_options_to_show = menu_options.copy()
         del menu_options_to_show['md']
+        del menu_options_to_show['ma']
+
         questionary.print(f'Available options: {", ".join(menu_options_to_show)}')
 
         option = questionary.autocomplete(
@@ -78,8 +82,16 @@ class CliUI:
         if option_fun:
             option_fun()
 
-    def make_domain(self):
+    def make_one_domain(self):
         domain_name, broadcast_date, str_copies = self.make_domain_gather_info()
+        copies_results = self.make_domain(domain_name, broadcast_date, str_copies)
+        questionary.print('======================')
+        questionary.print(f'Finished making domain {domain_name} for date {broadcast_date}')
+        for results in copies_results:
+            questionary.print(results)
+        questionary.print('======================')
+
+    def make_domain(self, domain_name, broadcast_date, str_copies):
         domain_dict = self.domains[domain_name]
 
         domain_bc_name = domain_dict['broadcast']['name']
@@ -95,16 +107,12 @@ class CliUI:
                 LocalFilesHelper.save_copy(copy, domain_bc_name, date)
                 copies_results.append(self.get_copy_results(copy, max_len_str_copy))
 
+            return copies_results
+
         except Exception as e:
             logger.error(f'Error while making domain {domain_name}. Details: {e}')
             logger.debug(traceback.format_exc())
-            return
-
-        questionary.print('======================')
-        questionary.print(f'Finished making domain {domain_name} for date {broadcast_date}')
-        for results in copies_results:
-            questionary.print(results)
-        questionary.print('======================')
+            return []
 
     def make_domain_gather_info(self):
         questionary.print(f'Domains : {", ".join(sorted(self.domains))}')
@@ -132,6 +140,34 @@ class CliUI:
         str_copies = str_copies.split(' ') if str_copies else None
 
         return domain_name, broadcast_date, str_copies
+
+    def make_all(self):
+        broadcast_date = questionary.text("Enter broadcast date:",
+                                          default=f"{datetime.today().month}/{datetime.today().day}").ask().strip()
+        if broadcast_date == 'back':
+            return
+
+        questionary.print(f'Staring making all domains : {", ".join(sorted(self.domains))}')
+
+        domains_results = []
+        for domain_name in self.domains:
+            questionary.print(f'Making domain: {domain_name}')
+
+            copies_results = self.make_domain(domain_name, broadcast_date, None)
+            domains_results.append({'name': domain_name, 'results': copies_results})
+
+            questionary.print('======================')
+            questionary.print(f'Finished making domain {domain_name} for date {broadcast_date}')
+            questionary.print('======================')
+
+        questionary.print('======================')
+        questionary.print('Finished making all domains')
+        for domain_results in domains_results:
+            questionary.print(f'Results for domain: {domain_results['name']}')
+            for results in domain_results['results']:
+                questionary.print(results)
+
+        questionary.print('======================')
 
     @staticmethod
     def calc_max_len_str_copy(copies):
