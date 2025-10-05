@@ -12,11 +12,11 @@ logger = logging.getLogger(__name__)
 class Core:
     @staticmethod
     def set_secrets(oauth_client, monday_token, credentials, callable_update_credentials):
-        copy_maker_core.secrets.Secrets.oauth_client = oauth_client,
+        copy_maker_core.secrets.Secrets.oauth_client = oauth_client
         copy_maker_core.secrets.Secrets.monday_token = monday_token
-        copy_maker_core.secrets.Secrets.credentials = credentials,
+        copy_maker_core.secrets.Secrets.credentials = credentials
         copy_maker_core.secrets.Secrets.callable_update_credentials = callable_update_credentials
-        
+
         copy_maker_core.google_services.ServicesHelper.build_services()
 
     @staticmethod

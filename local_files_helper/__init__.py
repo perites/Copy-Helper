@@ -28,7 +28,6 @@ class SettingsHelper:
 
     def read_settings_file(self):
         logger.debug(f'Reading json file {self.path_to_settings}')
-        print(self.path_to_settings)
         with open(self.path_to_settings, 'r', encoding="utf-8") as file:
             self.settings = json.load(file)
 
@@ -50,6 +49,8 @@ class DomainsHelper:
 
         self.domains_dicts = {}
         self.check_paths()
+
+        self.get_domains_dicts()
 
     def check_paths(self):
         default_domain_folder = f'{self.path_to_domains}/DefaultDomain'
@@ -126,6 +127,8 @@ class DomainsHelper:
 
         manual_lifts_htmls = {}
         for str_copy in str_copies:
+            manual_lifts_htmls[str_copy] = ''
+
             path = path_to_domain_results + f'{str_copy}.html'
             path_p = path_to_domain_results + f'{str_copy}-Priority.html'
 
@@ -141,7 +144,7 @@ class DomainsHelper:
 
     @staticmethod
     def save_lift_file(copy, path_to_domain_results):
-        file_name = copy.str_rep + ('-Priority' if copy.priority_info['is_priority'] else '')
+        file_name = copy.str_rep + ('-Priority' if copy.offer.priority_info['is_priority'] else '')
         path = path_to_domain_results + f'{file_name}.html'
         with open(path, 'w', encoding='utf-8') as file:
             file.write(copy.lift_html)
@@ -158,32 +161,18 @@ class DomainsHelper:
                     logger.info(f'Did not add sls for {copy.str_rep} in SLs.txt file as already has them')
                     return
 
-        if copy.priority_info['is_priority']:
+        if copy.offer.priority_info['is_priority']:
             unsub_url_str = f'Unsub link:\n{copy.priority_info['unsub_link']}\n\n'
             suffix = '-Priority'
 
         else:
             unsub_url_str, suffix = '', ''
 
-        if copy.custom_sls:
-            custom_sls_block = '''Custom SLs:\n'''
-            for lift_custom_sls, custom_sls in copy.custom_sls.items():
-                custom_sls_block += f'''
-        {lift_custom_sls} 
-        SL : {custom_sls['SL']}
-        SN : {custom_sls['SN']}
-
-        '''
-            custom_sls_block += '\n'
-        else:
-            custom_sls_block = ''
-
         copy_sls = (
                 copy.str_rep + suffix + f' | images : {len(copy.lift_images)}' + '\n\n' +
 
                 f'Tracking link:\n{copy.tracking_link}\n\n' +
                 unsub_url_str +
-                custom_sls_block +
 
                 'Sls:\n' +
 

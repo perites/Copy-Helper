@@ -70,16 +70,16 @@ class Offer:
 
         self.priority_info = self.get_priority_footer_values(priority_table_info["tableID"],
                                                              priority_table_info["pages"],
-                                                             priority_table_info["text_column"],
-                                                             priority_table_info["link_column"],
-                                                             priority_table_info["id_column"]
+                                                             priority_table_info["textColumn"],
+                                                             priority_table_info["linkColumn"],
+                                                             priority_table_info["idColumn"]
                                                              )
 
     def find_cached_data(self):
         offer_cache = self.cache.get_offer(self.name)
         if offer_cache and (offer_cache['creation_timestamp'] + MAX_CACHE_DURATION_SECONDS > time.time()):
             logger.debug(f'Found valid cache for {self.name}')
-            self.monday_fields = offer_cache['monday_fields']
+            self.monday_fields = offer_cache
             return True
 
         logger.debug(f'Offer {self.name} was not found in cache')
@@ -91,7 +91,7 @@ class Offer:
         monday_fields = self._process_raw_monday_colums(raw_monday_columns, monday_info['partners_folder_id'])
         self.monday_fields = monday_fields
 
-        self.cache.update_offer(self.name, {'monday_fields': monday_fields})
+        self.cache.update_offer(self.name, monday_fields)
 
     def _get_raw_monday_colums(self, board_id, monday_token):
         logger.info(f'Getting raw fields for {self.name} from monday')

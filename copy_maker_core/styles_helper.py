@@ -221,11 +221,11 @@ class StylesHelper:
                                                         f'<!-- image-block-start -->{self.styles_settings['imageBlock']}<!-- image-block-end -->',
                                                         1)
 
-                return
+                return images_urls
 
             else:
                 logger.debug('No images no image code, doing nothing')
-                return
+                return images_urls
 
         logger.info(f'Found {len(src_list)} images')
         for index, src_part in enumerate(src_list):

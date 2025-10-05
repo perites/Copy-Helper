@@ -111,7 +111,7 @@ class CliUI:
     def make_domain_gather_info(self):
         questionary.print(f'Domains : {", ".join(sorted(self.domains))}')
 
-        choices = {**core.domains, 'back': ''}
+        choices = {**self.domains, 'back': ''}
         domain_name = questionary.autocomplete("Choose domain:",
                                                choices=list(choices.keys()),
                                                validate=lambda val: val in choices,
@@ -161,7 +161,7 @@ class CliUI:
         if new_domain_name == 'back':
             return
 
-        questionary.print(f'Choose domain to copy from : {", ".join(sorted(core.domains))}')
+        questionary.print(f'Choose domain to copy from : {", ".join(sorted(self.domains))}')
         choices = {**core.domains, 'back': '', '': ''}
         template_domain_name = questionary.autocomplete("Template domain:",
                                                         choices=list(choices.keys()),

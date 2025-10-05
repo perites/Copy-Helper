@@ -22,7 +22,6 @@ class ServicesHelper:
         scopes = ['https://www.googleapis.com/auth/drive', 'https://www.googleapis.com/auth/spreadsheets.readonly']
 
         if Secrets.credentials:
-            print(Secrets.credentials)
             creds = Credentials.from_authorized_user_info(Secrets.credentials, scopes)
 
         if creds:
