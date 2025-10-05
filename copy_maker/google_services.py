@@ -60,7 +60,12 @@ class GoogleDrive:
 
         query = f"{name_part}'{folder_name}' and mimeType='application/vnd.google-apps.folder' and trashed=false and '{parent_folder_id}' in parents"
         folders = cls.execute_query(query)
-        return folders[0] if folders else None
+        if folders:
+            return folders[0]
+        else:
+            query = f"name='{folder_name} SA' and mimeType='application/vnd.google-apps.folder' and trashed=false and '{parent_folder_id}' in parents"
+            folders = cls.execute_query(query)
+            return folders[0] if folders else None
 
     @classmethod
     def get_folders_of_folder(cls, parent_folder_id):

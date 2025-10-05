@@ -348,16 +348,16 @@ class Offer:
         for file in lift_folder_files:
             if not mjml_found:
                 if (file['name'].lower().endswith('.html')) and ('mjml' in file['name'].lower()) and (
-                        'SL' not in file['name']):
+                        ' SL' not in file['name']):
                     lift_file = file
                     mjml_found = True
                     logger.debug(f"Found copy file (mjml): {lift_file['name']}")
 
-                elif (not lift_file) and (file['name'].lower().endswith('.html')) and ('SL' not in file['name']):
+                elif (not lift_file) and (file['name'].lower().endswith('.html')) and (' SL' not in file['name']):
                     lift_file = file
 
             if not sl_file:
-                if 'sl' in file['name'].lower():
+                if ('sl' in file['name'].lower()) and not file['name'].lower().endswith('.html'):
                     sl_file = file
                     logger.debug(f"Found SL file: {sl_file['name']}")
 
