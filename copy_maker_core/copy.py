@@ -60,7 +60,7 @@ class Copy:
     def change_html(self, domain_styles):
         styles_helper = StylesHelper(self.lift_html, self.lift_sls, domain_styles)
 
-        self.lift_images = styles_helper.process_images(self.img_code, self.str_rep)
+        self.lift_images = self.process_images(self.img_code, self.str_rep)
 
         styles_helper.antispam_copy()
         styles_helper.apply_styles()
@@ -68,6 +68,32 @@ class Copy:
 
         self.lift_html = styles_helper.lift_html
         self.lift_sls = styles_helper.lift_sls
+
+    def process_images(self, img_code, str_rep):
+        src_part_pattern = r'src="[^"]*'
+        images_urls = []
+        src_list = re.findall(src_part_pattern, self.lift_html)
+        if len(src_list) == 0:
+            if img_code:
+                logger.debug('Copy has img code and doesnt contain images')
+                logger.info(f'Adding image block to copy {str_rep}')
+                self.lift_html = self.lift_html.replace('<br><br>',
+                                                        f'<!-- image-block-start -->{self.styles_settings['imageBlock']}<!-- image-block-end -->',
+                                                        1)
+
+                return images_urls
+
+            else:
+                logger.debug('No images no image code, doing nothing')
+                return images_urls
+
+        logger.info(f'Found {len(src_list)} images')
+        for index, src_part in enumerate(src_list):
+            img_url = src_part.split('"')[1]
+            if img_url not in images_urls:
+                images_urls.append(img_url)
+
+        return images_urls
 
     def get_files_content(self):
         logger.info(f'Searching copy files for offer {self.offer.name} lift {self.lift_number}')
@@ -108,16 +134,16 @@ class Copy:
         for file in lift_folder_files:
             if not mjml_found:
                 if (file['name'].lower().endswith('.html')) and ('mjml' in file['name'].lower()) and (
-                        'SL' not in file['name']):
+                        ' SL' not in file['name']):
                     lift_file = file
                     mjml_found = True
                     logger.debug(f"Found copy file (mjml): {lift_file['name']}")
 
-                elif (not lift_file) and (file['name'].lower().endswith('.html')) and ('SL' not in file['name']):
+                elif (not lift_file) and (file['name'].lower().endswith('.html')) and (' SL' not in file['name']):
                     lift_file = file
 
             if not sl_file:
-                if 'sl' in file['name'].lower():
+                if ('sl' in file['name'].lower()) and not file['name'].lower().endswith('.html'):
                     sl_file = file
                     logger.debug(f"Found SL file: {sl_file['name']}")
 

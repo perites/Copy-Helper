@@ -89,7 +89,7 @@ class DomainsHelper:
             return
 
         logger.info('Creating new Domain')
-        domain_folder_path = f'{self.path_to_domains}' + f'{domain_name}/'
+        domain_folder_path = f'{self.path_to_domains}/' + f'{domain_name}/'
         try:
             os.makedirs(domain_folder_path)
         except FileExistsError:

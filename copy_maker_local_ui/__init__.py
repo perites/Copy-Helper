@@ -150,15 +150,14 @@ class CliUI:
         questionary.print(f'Staring making all domains : {", ".join(sorted(self.domains))}')
 
         domains_results = []
-        for domain_name in self.domains:
+        for domain_name in sorted(self.domains):
             questionary.print(f'Making domain: {domain_name}')
 
             copies_results = self.make_domain(domain_name, broadcast_date, None)
             domains_results.append({'name': domain_name, 'results': copies_results})
 
-            questionary.print('======================')
             questionary.print(f'Finished making domain {domain_name} for date {broadcast_date}')
-            questionary.print('======================')
+            questionary.print('\n')
 
         questionary.print('======================')
         questionary.print('Finished making all domains')
@@ -166,7 +165,7 @@ class CliUI:
             questionary.print(f'Results for domain: {domain_results['name']}')
             for results in domain_results['results']:
                 questionary.print(results)
-
+            questionary.print('\n')
         questionary.print('======================')
 
     @staticmethod
@@ -195,11 +194,11 @@ class CliUI:
         if new_domain_name == 'back':
             return
 
-        questionary.print(f'Choose domain to copy from : {", ".join(sorted(self.domains))}')
+        questionary.print(
+            f'Choose domain to copy from : {", ".join(sorted(self.domains))} or press Enter to copy from Default')
         choices = {**self.domains, 'back': '', '': ''}
         template_domain_name = questionary.autocomplete("Template domain:",
                                                         choices=list(choices.keys()),
-                                                        validate=lambda val: val in choices,
                                                         ignore_case=True,
                                                         match_middle=False,
                                                         style=self.autocomplete_style).ask()

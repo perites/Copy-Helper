@@ -63,8 +63,14 @@ class StylesHelper:
 
         links_color = self.styles_settings['linksColor'] if self.styles_settings[
                                                                 'linksColor'] != 'random-blue' else self.get_random_blue()
+
+        buttons_color = self.styles_settings.get('buttonLinksColor')
+        if buttons_color:
+            self.lift_html, success = self.replace_style(r'background-color\s*:\s*#28B628\s*;',
+                                                         f'background-color: {buttons_color};', self.lift_html)
+
         add_es_button = self.styles_settings['addEsButton']
-        self.lift_html = self.change_links(self.lift_html, links_color, add_es_button)
+        self.lift_html = self.change_links(self.lift_html, links_color, buttons_color, add_es_button)
 
     @staticmethod
     def get_random_blue():
@@ -97,7 +103,7 @@ class StylesHelper:
         return new_lift_html, True
 
     @classmethod
-    def change_links(cls, html_copy, link_color, add_es_button):
+    def change_links(cls, html_copy, link_color, buttons_color, add_es_button):
         a_tag_pattern = r'<a\s+([^>]*)'
 
         all_a_tags = re.findall(a_tag_pattern, html_copy)
@@ -105,7 +111,7 @@ class StylesHelper:
         for old_a_tag in all_a_tags:
             new_a_tag = old_a_tag
             if link_color:
-                new_a_tag = cls.change_link_color(link_color, old_a_tag)
+                new_a_tag = cls.change_link_color(link_color, buttons_color, old_a_tag)
             if add_es_button:
                 new_a_tag = cls.add_es_button(new_a_tag)
                 add_es_button = False
@@ -120,17 +126,23 @@ class StylesHelper:
         return new_a_tag
 
     @classmethod
-    def change_link_color(cls, link_color, a_tag):
+    def change_link_color(cls, link_color, buttons_color, a_tag):
         link_style = re.findall(r'style\s*=\s*"([^"]*)"', a_tag)
         if link_style:
             old_link_style = link_style[0]
 
             if ('background-color' in old_link_style) or ('background' in old_link_style):
                 logger.debug('Button detected, not changing color')
-                return a_tag
+                if not buttons_color:
+                    return a_tag
 
-            new_link_style, success = cls.replace_style(r'(?<![-\w])color\s*:\s*([^;"]+)', f'color: {link_color}',
-                                                        old_link_style)
+                new_link_style, success = cls.replace_style(r'(?<![-\w])background-color\s*:\s*([^;"]+)',
+                                                            f'background-color: {buttons_color}',
+                                                            old_link_style)
+
+            else:
+                new_link_style, success = cls.replace_style(r'(?<![-\w])color\s*:\s*([^;"]+)', f'color: {link_color}',
+                                                            old_link_style)
 
             if not success:
                 link_styles_list = old_link_style.split(';')
@@ -177,16 +189,19 @@ class StylesHelper:
             "x": "х",
             "c": "с",
             "%": "％",
-            "$": "＄"
+            "$": "＄",
+            "&#36;": "＄"
         }
 
         replacements = {**replacements, **custom_replacements}
 
         new_text = ''
         inside_tag = False
-        inside_entity = False
-        for char in text:
+        inside_str_emoji = False
+        str_emoji = ''
+        fake_str_emoji = ''
 
+        for char in text:
             match char:
                 case '<':
                     inside_tag = True
@@ -194,52 +209,49 @@ class StylesHelper:
                 case '>':
                     inside_tag = False
 
-                # case '&':
-                #     inside_entity = True
+                case '&':
+                    if inside_str_emoji:
+                        new_text += fake_str_emoji
+                        str_emoji = ''
+                        fake_str_emoji = ''
 
-                # case ';':
-                #     inside_entity = False
+                    inside_str_emoji = True
 
-            if (not inside_tag) and (not inside_entity) and replacements.get(char):
-                replaced_char = replacements.get(char)
+                case ';':
+                    inside_str_emoji = False
+                    str_emoji += char
+                    fake_str_emoji += replacements.get(char) or char
+                    replaced_char = replacements.get(str_emoji)
+                    new_text += replaced_char or fake_str_emoji
+
+                    str_emoji = ''
+                    fake_str_emoji = ''
+                    continue
+
+            if inside_str_emoji:
+                str_emoji += char
+                fake_str_emoji += replacements.get(char) or char
+                continue
+
+            if (not inside_tag) and (not inside_str_emoji):
+                replaced_char = replacements.get(char) or char
             else:
                 replaced_char = char
 
             new_text += replaced_char
 
+        if inside_str_emoji:
+            new_text += fake_str_emoji
+
         return new_text
-
-    def process_images(self, img_code, str_rep):
-        src_part_pattern = r'src="[^"]*'
-        images_urls = []
-        src_list = re.findall(src_part_pattern, self.lift_html)
-        if len(src_list) == 0:
-            if img_code:
-                logger.debug('Copy has img code and doesnt contain images')
-                logger.info(f'Adding image block to copy {str_rep}')
-                self.lift_html = self.lift_html.replace('<br><br>',
-                                                        f'<!-- image-block-start -->{self.styles_settings['imageBlock']}<!-- image-block-end -->',
-                                                        1)
-
-                return images_urls
-
-            else:
-                logger.debug('No images no image code, doing nothing')
-                return images_urls
-
-        logger.info(f'Found {len(src_list)} images')
-        for index, src_part in enumerate(src_list):
-            img_url = src_part.split('"')[1]
-            if img_url not in images_urls:
-                images_urls.append(img_url)
-
-        return images_urls
 
     def make_priority_footer_html(self, footer_text, url):
         footer_link_keywords = [
             'edit your e-mail notification preferences or unsubscribe',
             'Privacy Policy',
             'unsubscribe here',
+            'Unsubscribe',
+            'unsubscribe',
             'Unsubscribe Here',
             'click here',
             'here',
