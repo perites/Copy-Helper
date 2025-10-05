@@ -16,10 +16,12 @@ logger = logging.getLogger(__name__)
 
 
 class OffersCache:
-    def get_offer(self, offer_name):
+    @classmethod
+    def get_offer(cls, offer_name):
         raise NotImplemented
 
-    def update_offer(self, offer_name, new_data):
+    @classmethod
+    def update_offer(cls, offer_name, new_data):
         raise NotImplemented
 
 

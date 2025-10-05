@@ -8,45 +8,56 @@ import questionary
 from prompt_toolkit.styles import Style
 
 from core import core
+from local_files_helper import LocalFilesHelper
 
 logger = logging.getLogger(__name__)
 
 
 class CliUI:
-    autocomplete_style = Style.from_dict({
-        "completion-menu.completion": "bg:#444444 ansiwhite",
-        "scrollbar.background": "bg:black",
-        "scrollbar.button": "bg:black",
-        "prompt": "bold ansiwhite",
-    })
 
-    @classmethod
-    def start(cls):
-        cls.clear_console()
+    def __init__(self):
+        self.autocomplete_style = Style.from_dict({
+            "completion-menu.completion": "bg:#444444 ansiwhite",
+            "scrollbar.background": "bg:black",
+            "scrollbar.button": "bg:black",
+            "prompt": "bold ansiwhite",
+        })
+
+        self.settings = LocalFilesHelper.sh.settings
+        self.domains = LocalFilesHelper.dh.domains_dicts
+
+        core.set_secrets(
+            self.settings['Secrets']['OAUTH_CLIENT'],
+            self.settings['Secrets']['MONDAY_TOKEN'],
+            self.settings['Secrets'].get('CREDENTIALS'),
+            LocalFilesHelper.sh.update_credentials
+        )
+
+    def start(self):
+        self.clear_console()
         questionary.print('Welcome to copy-helper')
         while True:
             try:
-                cls.main_cycle()
+                self.main_cycle()
             except Exception as e:
                 logger.critical(f'Unexpected Error: {e}')
                 logger.debug(traceback.format_exc())
                 retry = questionary.autocomplete(
                     'Press Enter to return to main page, or type "exit" to quit:',
                     choices=['exit'], ignore_case=True,
-                    match_middle=True, style=cls.autocomplete_style).ask().strip().lower()
+                    match_middle=True, style=self.autocomplete_style).ask().strip().lower()
                 if retry == 'exit':
                     core.exit()
 
-    @classmethod
-    def main_cycle(cls):
+    def main_cycle(self):
 
         menu_options = {
-            'make-domain': cls.make_domain,
-            'md': cls.make_domain,
-            'add-domain': cls.add_domain,
+            'make-domain': self.make_domain,
+            'md': self.make_domain,
+            'add-domain': self.add_domain,
             # 'edit-domain':cls.edit_domain,
-            'clear-cache': cls.clear_cache,
-            'clear': cls.clear_console,
+            'clear-cache': self.clear_cache,
+            'clear': self.clear_console,
             'restart': core.restart_script,
             'exit': core.exit
         }
@@ -57,10 +68,10 @@ class CliUI:
 
         option = questionary.autocomplete(
             "Select an option:",
-            choices=menu_options,
+            choices=list(menu_options.keys()),
             validate=lambda val: val in menu_options,
             ignore_case=True,
-            match_middle=True, style=cls.autocomplete_style
+            match_middle=True, style=self.autocomplete_style
 
         ).ask()
 
@@ -69,17 +80,44 @@ class CliUI:
         if option_fun:
             option_fun()
 
-    @classmethod
-    def make_domain(cls):
-        questionary.print(f'Domains : {", ".join(sorted(core.domains))}')
+    def make_domain(self):
+        domain_name, broadcast_date, str_copies = self.make_domain_gather_info()
+        domain_dict = self.domains[domain_name]
+
+        domain_bc_name = domain_dict['broadcast']['name']
+        date = broadcast_date.replace('/', '.')
+
+        copies_results = []
+        try:
+            manual_lifts_htmls = LocalFilesHelper.dh.get_lifts_htmls(str_copies, domain_bc_name, date)
+
+            copies = core.make_domain(domain_dict, broadcast_date, str_copies, manual_lifts_htmls)
+            max_len_str_copy = self.calc_max_len_str_copy(copies)
+            for copy in copies:
+                LocalFilesHelper.save_copy(copy, domain_bc_name, date)
+                copies_results.append(self.get_copy_results(copy, max_len_str_copy))
+
+        except Exception as e:
+            logger.error(f'Error while making domain {domain_name}. Details: {e}')
+            logger.debug(traceback.format_exc())
+            return
+
+        questionary.print('======================')
+        questionary.print(f'Finished making domain {domain_name} for date {broadcast_date}')
+        for results in copies_results:
+            questionary.print(results)
+        questionary.print('======================')
+
+    def make_domain_gather_info(self):
+        questionary.print(f'Domains : {", ".join(sorted(self.domains))}')
 
         choices = {**core.domains, 'back': ''}
         domain_name = questionary.autocomplete("Choose domain:",
-                                               choices=choices,
+                                               choices=list(choices.keys()),
                                                validate=lambda val: val in choices,
                                                ignore_case=True,
                                                match_middle=False,
-                                               style=cls.autocomplete_style).ask()
+                                               style=self.autocomplete_style).ask()
 
         if domain_name == 'back':
             return
@@ -94,52 +132,48 @@ class CliUI:
             return
 
         str_copies = str_copies.split(' ') if str_copies else None
-        try:
-            domain_results = core.make_domain(domain_name, broadcast_date, cls.get_str_copies, str_copies)
-        except Exception as e:
-            logger.error(f'Error while making domain {domain_name}. Details: {e}')
-            logger.debug(traceback.format_exc())
+
+        return domain_name, broadcast_date, str_copies
+
+    @staticmethod
+    def calc_max_len_str_copy(copies):
+        max_len_str_copy = 0
+        for copy in copies:
+            if len(copy.str_rep) > max_len_str_copy:
+                max_len_str_copy = len(copy.str_rep)
+
+        return max_len_str_copy
+
+    @staticmethod
+    def get_copy_results(copy, max_len_str_copy):
+        warning_message = 'Warning!:' if not copy.results()['link'] else ''
+        str_rep_padding = copy.str_rep + (' ' * (max_len_str_copy - len(copy.str_rep)))
+
+        copy_results = " | ".join(
+            [f'{name} : {'+' if raw_result else '-'}' for name, raw_result in copy.results().items()])
+
+        results = f'{warning_message}{str_rep_padding} : {copy_results} img {len(copy.lift_images)}'
+
+        return results
+
+    def add_domain(self):
+        new_domain_name = questionary.text("Enter new domain name:").ask().strip()
+        if new_domain_name == 'back':
             return
 
-        questionary.print('======================')
-        questionary.print(f'Finished making domain {domain_name} for date {broadcast_date}')
-        for results in domain_results:
-            questionary.print(results)
-        questionary.print('======================')
+        questionary.print(f'Choose domain to copy from : {", ".join(sorted(core.domains))}')
+        choices = {**core.domains, 'back': '', '': ''}
+        template_domain_name = questionary.autocomplete("Template domain:",
+                                                        choices=list(choices.keys()),
+                                                        validate=lambda val: val in choices,
+                                                        ignore_case=True,
+                                                        match_middle=False,
+                                                        style=self.autocomplete_style).ask()
 
-        # questionary.print(next(make_domain_results))
-        # while True:
-        #     try:
-
-        #         sys.stdout.write(f'\033[2K\rStatus: {next(make_domain_results)}')
-        #         sys.stdout.flush()
-        #         time.sleep(2)
-
-        #     except StopIteration as e:
-
-        #         sys.stdout.write('\033[2K\rStatus: Done\n')
-        #         sys.stdout.flush()
-        #         questionary.print('======================')
-        #         questionary.print(f'Finished making domain {domain_name} for date {broadcast_date}')
-        #         for results in e.value:
-        #             questionary.print(results)
-        #         questionary.print('======================')
-
-        #         break
-
-    @classmethod
-    def get_str_copies(cls):
-        str_copies = questionary.text(
-            'Copies were not found, you can enter them manually (separated by space):').ask().strip().split(' ')
-
-        return str_copies
-
-    @classmethod
-    def add_domain(cls):
-        domain_name = questionary.text("Enter new domain name:").ask().strip()
-        if domain_name == 'back':
+        if template_domain_name == 'back':
             return
-        core.create_new_domain(domain_name)
+
+        LocalFilesHelper.dh.create_new_domain(new_domain_name, template_domain_name)
 
     @classmethod
     def clear_cache(cls):

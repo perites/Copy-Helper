@@ -33,4 +33,4 @@ def configure_logging():
 if __name__ == "__main__":
     configure_logging()
 
-    cli_ui.CliUI.start()
+    cli_ui.CliUI().start()

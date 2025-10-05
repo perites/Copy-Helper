@@ -40,10 +40,10 @@ class Domain:
 
         return copies_for_domain[0][0].strip().split(' ')
 
-    def make_copy(self, str_copy):
+    def make_copy(self, str_copy, manual_lift_html):
         try:
             copy = Copy.match_str_copy(str_copy)
-            copy.find(self.products)
+            copy.find(self.products, manual_lift_html)
             copy.change_html(self.styles)
             return copy
 

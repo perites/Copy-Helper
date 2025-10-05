@@ -4,7 +4,6 @@ import re
 from . import google_services
 from .crypto_all_products_types import crypto_all_products_types
 from .offer import Offer, StatusNotAllowed
-from .secrets import secrets
 from .styles_helper import StylesHelper
 
 logger = logging.getLogger(__name__)
@@ -32,16 +31,16 @@ class Copy:
 
         return cls(match.group(1), match.group(2), match.group(3))
 
-    def result(self):
+    def results(self):
         return {
             'str_rep': self.str_rep,
-            'html_r': self.html_found,
-            'sl_r': bool(self.lift_sls),
-            'pfooter_r': bool(self.offer.priority_info['unsub_text']),
-            'link_r': bool('UNKNOWN_TYPE' not in self.tracking_link)
+            'html': self.html_found,
+            'sl': bool(self.lift_sls),
+            'pfooter': bool(self.offer.priority_info['unsub_text']),
+            'link': bool('UNKNOWN_TYPE' not in self.tracking_link)
         }
 
-    def find(self, products_info):
+    def find(self, products_info, manual_lift_html):
         monday_info = {'mondayId': products_info['mondayId'], 'monday_token': secrets.monday_token,
                        'partners_folder_id': products_info['partnersFolderId']}
 
@@ -53,6 +52,9 @@ class Copy:
         self.make_tracking_link(products_info['trackingLink'])
         self.make_custom_unsub_link(products_info['priority']['unsubLinkTemplate'])
         self.get_files_content()
+        if not self.lift_html:
+            logging.info('Using provided lift html')
+            self.lift_html = manual_lift_html
         self.lift_html = self.lift_html.replace('urlhere', self.tracking_link)
 
     def change_html(self, domain_styles):
@@ -76,7 +78,7 @@ class Copy:
             lift_file_content = google_services.GoogleDrive.get_file_content(lift_file)
             self.html_found = True
         else:
-            logger.warning(f'Lift file for {self.offer.name} lift {self.lift_number} was not found')
+            logger.warning(f'Lift file for {self.offer.name} lift {self.lift_number} was not found in GoogleDrive')
             lift_file_content = ''
 
         if sl_file:
