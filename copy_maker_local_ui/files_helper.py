@@ -162,7 +162,7 @@ class DomainsHelper:
                     return
 
         if copy.offer.priority_info['is_priority']:
-            unsub_url_str = f'Unsub link:\n{copy.priority_info['unsub_link']}\n\n'
+            unsub_url_str = f'Unsub link:\n{copy.offer.priority_info['unsub_link']}\n\n'
             suffix = '-Priority'
 
         else:
@@ -267,7 +267,7 @@ class ImageHelper:
 
         if self.settings['SaveImages']:
             for index, image_url in enumerate(copy.lift_images):
-                self.save_image(f'{copy.offer_name}{copy.lift_number}-image-{index + 1}', image_url, save_image_path)
+                self.save_image(f'{copy.offer.name}{copy.lift_number}-image-{index + 1}', image_url, save_image_path)
 
 
 class LocalFilesHelper:
