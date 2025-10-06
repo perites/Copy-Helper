@@ -60,7 +60,7 @@ class Copy:
     def change_html(self, domain_styles):
         styles_helper = StylesHelper(self.lift_html, self.lift_sls, domain_styles)
 
-        self.lift_images = self.process_images(self.img_code, self.str_rep)
+        self.lift_images = self.process_images(self.img_code, self.str_rep, domain_styles['imageBlock'])
 
         styles_helper.antispam_copy()
         styles_helper.apply_styles()
@@ -69,7 +69,7 @@ class Copy:
         self.lift_html = styles_helper.lift_html
         self.lift_sls = styles_helper.lift_sls
 
-    def process_images(self, img_code, str_rep):
+    def process_images(self, img_code, str_rep, image_block):
         src_part_pattern = r'src="[^"]*'
         images_urls = []
         src_list = re.findall(src_part_pattern, self.lift_html)
@@ -78,7 +78,7 @@ class Copy:
                 logger.debug('Copy has img code and doesnt contain images')
                 logger.info(f'Adding image block to copy {str_rep}')
                 self.lift_html = self.lift_html.replace('<br><br>',
-                                                        f'<!-- image-block-start -->{self.styles_settings['imageBlock']}<!-- image-block-end -->',
+                                                        f'<!-- image-block-start -->{image_block}<!-- image-block-end -->',
                                                         1)
 
                 return images_urls
