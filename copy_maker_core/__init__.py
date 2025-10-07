@@ -47,7 +47,8 @@ class Core:
         made_copies = []
         for str_copy in str_copies:
             copy = domain.make_copy(str_copy, manual_lift_html.get(str_copy))
-            made_copies.append(copy)
+            if copy:
+                made_copies.append(copy)
 
         return made_copies
 

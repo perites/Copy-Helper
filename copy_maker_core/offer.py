@@ -12,6 +12,13 @@ PATH_TO_OFFERS_CACHE_FILE = 'copy_maker_core/offers_info_cache.json'
 if not os.path.exists(PATH_TO_OFFERS_CACHE_FILE):
     open('copy_maker_core/offers_info_cache.json', 'w').write('{}')
 
+PATH_TO_WRONG_MONDAY_OFFERS_FILE = 'copy_maker_core/wrong_monday_offers.json'
+if not os.path.exists(PATH_TO_WRONG_MONDAY_OFFERS_FILE):
+    open('copy_maker_core/wrong_monday_offers.json', 'w').write('{}')
+
+with open(PATH_TO_WRONG_MONDAY_OFFERS_FILE, 'r', encoding="utf-8") as file:
+    WRONG_MONDAY_OFFERS = json.load(file)
+
 logger = logging.getLogger(__name__)
 
 
@@ -96,16 +103,7 @@ class Offer:
     def _get_raw_monday_colums(self, board_id, monday_token):
         logger.info(f'Getting raw fields for {self.name} from monday')
 
-        WRONG_OFFERS = {
-            "AHMS": 8753642885,
-            "AHTT": 8753520275,
-            "CONO": 7101745053,
-            "AHTG": 8721191855,
-            "BIGG": 7654340357,
-            "NETA": 18063735889
-        }
-
-        item_id = WRONG_OFFERS.get(self.name)
+        item_id = WRONG_MONDAY_OFFERS.get(self.name)
 
         if item_id:
             query = '''
