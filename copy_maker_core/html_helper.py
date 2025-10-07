@@ -5,7 +5,7 @@ import re
 logger = logging.getLogger(__name__)
 
 
-class StylesHelper:
+class HtmlHelper:
     def __init__(self, lift_html, lift_sls, styles_settings):
         self.lift_html = lift_html
         self.lift_sls = lift_sls

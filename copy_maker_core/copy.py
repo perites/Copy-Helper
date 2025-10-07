@@ -3,9 +3,9 @@ import re
 
 from . import google_services
 from .crypto_all_products_types import crypto_all_products_types
+from .html_helper import HtmlHelper
 from .offer import Offer, StatusNotAllowed
 from .secrets import Secrets
-from .styles_helper import StylesHelper
 
 logger = logging.getLogger(__name__)
 
@@ -59,7 +59,7 @@ class Copy:
     def change_html(self, domain_styles):
         self.lift_images = self.process_images(self.img_code, self.str_rep, domain_styles['imageBlock'])
 
-        styles_helper = StylesHelper(self.lift_html, self.lift_sls, domain_styles)
+        styles_helper = HtmlHelper(self.lift_html, self.lift_sls, domain_styles)
         styles_helper.antispam_copy()
         styles_helper.apply_styles()
         styles_helper.add_template(self.offer.priority_info)
