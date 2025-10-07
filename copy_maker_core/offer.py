@@ -101,7 +101,8 @@ class Offer:
             "AHTT": 8753520275,
             "CONO": 7101745053,
             "AHTG": 8721191855,
-            "BIGG": 7654340357
+            "BIGG": 7654340357,
+            "NETA": 18063735889
         }
 
         item_id = WRONG_OFFERS.get(self.name)

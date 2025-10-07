@@ -55,19 +55,19 @@ class Copy:
         if not self.lift_html:
             logging.info('Using provided lift html')
             self.lift_html = manual_lift_html
-        self.lift_html = self.lift_html.replace('urlhere', self.tracking_link)
 
     def change_html(self, domain_styles):
-        styles_helper = StylesHelper(self.lift_html, self.lift_sls, domain_styles)
-
         self.lift_images = self.process_images(self.img_code, self.str_rep, domain_styles['imageBlock'])
 
+        styles_helper = StylesHelper(self.lift_html, self.lift_sls, domain_styles)
         styles_helper.antispam_copy()
         styles_helper.apply_styles()
         styles_helper.add_template(self.offer.priority_info)
 
         self.lift_html = styles_helper.lift_html
         self.lift_sls = styles_helper.lift_sls
+
+        self.lift_html = self.lift_html.replace('urlhere', self.tracking_link)
 
     def process_images(self, img_code, str_rep, image_block):
         src_part_pattern = r'src="[^"]*'

@@ -263,7 +263,7 @@ class ImageHelper:
     def save_images(self, copy, date):
         save_image_path = self.settings['ImagesDirectory'] + f'{date}/'
         if copy.img_code:
-            self.find_custom_image(f'{copy.offer_name}_{copy.img_code}', save_image_path)
+            self.find_custom_image(f'{copy.offer.name}_{copy.img_code}', save_image_path)
 
         if self.settings['SaveImages']:
             for index, image_url in enumerate(copy.lift_images):

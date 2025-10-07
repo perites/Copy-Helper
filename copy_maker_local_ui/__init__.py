@@ -99,7 +99,8 @@ class CliUI:
 
         copies_results = []
         try:
-            manual_lifts_htmls = LocalFilesHelper.dh.get_lifts_htmls(str_copies, domain_bc_name, date)
+            # manual_lifts_htmls = LocalFilesHelper.dh.get_lifts_htmls(str_copies, domain_bc_name, date)
+            manual_lifts_htmls = {}
 
             copies = self.core.make_domain(domain_dict, broadcast_date, str_copies, manual_lifts_htmls)
             max_len_str_copy = self.calc_max_len_str_copy(copies)

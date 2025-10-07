@@ -45,14 +45,14 @@ class Core:
             return
 
         if not str_copies:
-            domain.get_copies_from_broadcast(broadcast_date)
+            str_copies = domain.get_copies_from_broadcast(broadcast_date)
 
         logger.info(f'Processing copies: {", ".join(str_copies)}')
 
         made_copies = []
         for str_copy in str_copies:
             try:
-                copy = domain.make_copy(str_copy, manual_lift_html[str_copy])
+                copy = domain.make_copy(str_copy, manual_lift_html.get(str_copy))
                 made_copies.append(copy)
             except Exception as e:
                 logger.error(f'Error while making copy {str_copy}. Details : {e}')
