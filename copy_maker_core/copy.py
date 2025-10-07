@@ -137,7 +137,7 @@ class Copy:
                         ' SL' not in file['name']):
                     lift_file = file
                     mjml_found = True
-                    logger.debug(f"Found copy file (mjml): {lift_file['name']}")
+                    logger.info(f"Found copy file (mjml): {lift_file['name']}")
 
                 elif (not lift_file) and (file['name'].lower().endswith('.html')) and (' SL' not in file['name']):
                     lift_file = file
@@ -145,7 +145,7 @@ class Copy:
             if not sl_file:
                 if ('sl' in file['name'].lower()) and not file['name'].lower().endswith('.html'):
                     sl_file = file
-                    logger.debug(f"Found SL file: {sl_file['name']}")
+                    logger.info(f"Found SL file: {sl_file['name']}")
 
             if mjml_found and sl_file:
                 break
@@ -186,6 +186,8 @@ class Copy:
         if not crypto_product_types:
             logger.warning(f'{self.offer.name} does not have according type, using regular type "B"')
             return 'B'
+
+        logger.info('Using link type for Crypto (CO)')
 
         return str(crypto_product_types.get(int(self.lift_number), 'DeadEmail'))
 

@@ -85,7 +85,7 @@ class Offer:
     def find_cached_data(self):
         offer_cache = self.cache.get_offer(self.name)
         if offer_cache and (offer_cache['creation_timestamp'] + MAX_CACHE_DURATION_SECONDS > time.time()):
-            logger.debug(f'Found valid cache for {self.name}')
+            logger.info(f'Found valid cache for {self.name}')
             self.monday_fields = offer_cache
             return True
 
@@ -93,7 +93,7 @@ class Offer:
         return False
 
     def get_fresh_data(self, monday_info):
-        logger.debug(f'Getting fresh data for offer {self.name}')
+        logger.info(f'Getting fresh data for offer {self.name}')
         raw_monday_columns = self._get_raw_monday_colums(monday_info['mondayId'], monday_info['monday_token'])
         monday_fields = self._process_raw_monday_colums(raw_monday_columns, monday_info['partners_folder_id'])
         self.monday_fields = monday_fields
@@ -101,7 +101,7 @@ class Offer:
         self.cache.update_offer(self.name, monday_fields)
 
     def _get_raw_monday_colums(self, board_id, monday_token):
-        logger.info(f'Getting raw fields for {self.name} from monday')
+        logger.debug(f'Getting raw fields for {self.name} from monday')
 
         item_id = WRONG_MONDAY_OFFERS.get(self.name)
 

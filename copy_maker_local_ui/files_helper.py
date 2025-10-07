@@ -148,7 +148,7 @@ class DomainsHelper:
         path = path_to_domain_results + f'{file_name}.html'
         with open(path, 'w', encoding='utf-8') as file:
             file.write(copy.lift_html)
-            logger.debug(f'Successfully saved lift file for {copy.str_rep}')
+            logger.info(f'Successfully saved lift file for {copy.str_rep}')
 
     @staticmethod
     def save_sl_file(copy, domain_bc_name, date, path_to_domain_results):
