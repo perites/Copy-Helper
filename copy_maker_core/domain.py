@@ -49,6 +49,7 @@ class Domain:
             copy = Copy.match_str_copy(str_copy)
             copy.find(self.products, manual_lift_html)
             copy.change_html(self.styles)
+            copy.add_link()
             return copy
 
         except Exception as e:

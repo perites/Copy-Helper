@@ -57,6 +57,8 @@ class Copy:
             self.lift_html = manual_lift_html
 
     def change_html(self, domain_styles):
+        logger.info('Applying styles to lift html')
+
         self.lift_images = self.process_images(self.img_code, self.str_rep, domain_styles['imageBlock'])
 
         styles_helper = HtmlHelper(self.lift_html, self.lift_sls, domain_styles)
@@ -67,6 +69,8 @@ class Copy:
         self.lift_html = styles_helper.lift_html
         self.lift_sls = styles_helper.lift_sls
 
+    def add_link(self):
+        logger.info('Adding link')
         self.lift_html = self.lift_html.replace('urlhere', self.tracking_link)
 
     def process_images(self, img_code, str_rep, image_block):
