@@ -85,11 +85,13 @@ class CliUI:
     def make_one_domain(self):
         domain_name, broadcast_date, str_copies = self.make_domain_gather_info()
         copies_results = self.make_domain(domain_name, broadcast_date, str_copies)
+
         questionary.print('======================')
         questionary.print(f'Finished making domain {domain_name} for date {broadcast_date}')
         for results in copies_results:
             questionary.print(results)
         questionary.print('======================')
+        questionary.print('')
 
     def make_domain(self, domain_name, broadcast_date, str_copies):
         domain_dict = self.domains[domain_name]
@@ -99,14 +101,24 @@ class CliUI:
 
         copies_results = []
         try:
-            # manual_lifts_htmls = LocalFilesHelper.dh.get_lifts_htmls(str_copies, domain_bc_name, date)
-            manual_lifts_htmls = {}
 
-            copies = self.core.make_domain(domain_dict, broadcast_date, str_copies, manual_lifts_htmls)
+            if not str_copies:
+                str_copies = self.core.get_domain_copies(domain_dict, broadcast_date)
+
+            if not str_copies:
+                return []
+
+            manual_lifts_htmls = LocalFilesHelper.dh.get_lifts_htmls(str_copies, domain_bc_name, date)
+
+            copies = self.core.make_domain(domain_dict, str_copies, manual_lifts_htmls)
             max_len_str_copy = self.calc_max_len_str_copy(copies)
             for copy in copies:
-                LocalFilesHelper.save_copy(copy, domain_bc_name, date)
-                copies_results.append(self.get_copy_results(copy, max_len_str_copy))
+                try:
+                    LocalFilesHelper.save_copy(copy, domain_bc_name, date)
+                    copies_results.append(self.get_copy_results(copy, max_len_str_copy))
+                except Exception as e:
+                    logger.error(f'Error while saving copy {copy.str_rep}. Details: {e}')
+                    logger.debug(traceback.format_exc())
 
             return copies_results
 
@@ -158,7 +170,7 @@ class CliUI:
             domains_results.append({'name': domain_name, 'results': copies_results})
 
             questionary.print(f'Finished making domain {domain_name} for date {broadcast_date}')
-            questionary.print('\n')
+            questionary.print('')
 
         questionary.print('======================')
         questionary.print('Finished making all domains')
@@ -166,7 +178,7 @@ class CliUI:
             questionary.print(f'Results for domain: {domain_results['name']}')
             for results in domain_results['results']:
                 questionary.print(results)
-            questionary.print('\n')
+            questionary.print('')
         questionary.print('======================')
 
     @staticmethod

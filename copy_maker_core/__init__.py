@@ -36,7 +36,7 @@ class Core:
         offer.OffersCacheJSON.update_offer(offer_name, {})
 
     @staticmethod
-    def make_domain(domain_dict, broadcast_date, str_copies, manual_lift_html):
+    def make_domain(domain_dict, str_copies, manual_lift_html):
         try:
             domain = dmn.Domain(domain_dict)
         except Exception as e:
@@ -44,18 +44,26 @@ class Core:
             logger.debug(traceback.format_exc())
             return
 
-        if not str_copies:
-            str_copies = domain.get_copies_from_broadcast(broadcast_date)
-
-        logger.info(f'Processing copies: {", ".join(str_copies)}')
-
         made_copies = []
         for str_copy in str_copies:
-            try:
-                copy = domain.make_copy(str_copy, manual_lift_html.get(str_copy))
-                made_copies.append(copy)
-            except Exception as e:
-                logger.error(f'Error while making copy {str_copy}. Details : {e}')
-                logger.debug(traceback.format_exc())
+            copy = domain.make_copy(str_copy, manual_lift_html.get(str_copy))
+            made_copies.append(copy)
 
         return made_copies
+
+    @staticmethod
+    def get_domain_copies(domain_dict, broadcast_date):
+        try:
+            domain = dmn.Domain(domain_dict)
+        except Exception as e:
+            logger.error(f'Error parsing domain dict')
+            logger.debug(traceback.format_exc())
+            return []
+
+        str_copies = domain.get_copies_from_broadcast(broadcast_date)
+        if str_copies:
+            logger.info(f'Found copies: {", ".join(str_copies)}')
+        else:
+            logger.warning(f'No copies found')
+
+        return str_copies
