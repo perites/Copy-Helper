@@ -38,11 +38,15 @@ class Domain:
             logger.info(f'Could not find copies in range {copies_range} in Broadcast')
             return
 
-        copies_str = copies_for_domain[0][0].strip().split(' ')
-        copies_str = list(map(lambda copy: copy.replace('(P)', ''), copies_str))
-        copies_str = list(map(lambda copy: copy.replace('(L)', ''), copies_str))
+        str_copies = copies_for_domain[0][0].strip()
+        str_copies = str_copies.replace('(', ' ')
+        str_copies = str_copies.replace(')', ' ')
+        str_copies = str_copies.split(' ')
 
-        return copies_str
+        str_copies = list(map(lambda str_copy: str_copy.replace(' P ', ''), str_copies))
+        str_copies = list(map(lambda str_copy: str_copy.replace(' L ', ''), str_copies))
+
+        return str_copies
 
     def make_copy(self, str_copy, manual_lift_html):
         try:

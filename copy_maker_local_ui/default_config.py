@@ -1,7 +1,7 @@
 default_general_settings = r'''
 {
     "ResultsDirectory": "",
-    "ResultsDirectoryType": "Domain-Date",
+    "ResultsDirectoryType": "Date-Domain",
     "ImagesDirectory": "",
     "SaveImages": false,
     "Secrets": {
