@@ -43,8 +43,7 @@ class Domain:
         str_copies = str_copies.replace(')', ' ')
         str_copies = str_copies.split(' ')
 
-        str_copies = list(map(lambda str_copy: str_copy.replace(' P ', ''), str_copies))
-        str_copies = list(map(lambda str_copy: str_copy.replace(' L ', ''), str_copies))
+        str_copies = list(filter(lambda str_copy: len(str_copy) > 2, str_copies))
 
         return str_copies
 

@@ -7,19 +7,21 @@ import requests
 
 from . import google_services
 
+logger = logging.getLogger(__name__)
+
 MAX_CACHE_DURATION_SECONDS = 60 * 60 * 6
 PATH_TO_OFFERS_CACHE_FILE = 'copy_maker_core/offers_info_cache.json'
 if not os.path.exists(PATH_TO_OFFERS_CACHE_FILE):
+    logger.debug('Creating Offers Cache File')
     open('copy_maker_core/offers_info_cache.json', 'w').write('{}')
 
 PATH_TO_WRONG_MONDAY_OFFERS_FILE = 'copy_maker_core/wrong_monday_offers.json'
 if not os.path.exists(PATH_TO_WRONG_MONDAY_OFFERS_FILE):
+    logger.debug('Creating Wrong Offers File')
     open('copy_maker_core/wrong_monday_offers.json', 'w').write('{}')
 
 with open(PATH_TO_WRONG_MONDAY_OFFERS_FILE, 'r', encoding="utf-8") as file:
     WRONG_MONDAY_OFFERS = json.load(file)
-
-logger = logging.getLogger(__name__)
 
 
 class OffersCache:

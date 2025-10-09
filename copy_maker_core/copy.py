@@ -126,7 +126,10 @@ class Copy:
                                                                          'copy_location_folder_id'])
 
         if not lift_folder:
-            raise LiftFolderNotFound(self.lift_number, self.offer.name)
+            # raise LiftFolderNotFound(self.lift_number, self.offer.name)
+            logger.warning(
+                f'Lift {self.lift_number} for offer {self.offer.name} not found. Please check if lift exists on google drive')
+            return "", ""
 
         lift_folder_files = google_services.GoogleDrive.get_files_from_folder(lift_folder['id'])
 
