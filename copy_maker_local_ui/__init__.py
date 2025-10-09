@@ -1,10 +1,15 @@
+import json
 import logging
 import os
 import platform
+import sys
 import traceback
 from datetime import datetime
 
 import questionary
+from google.auth.transport.requests import Request
+from google.oauth2.credentials import Credentials
+from google_auth_oauthlib.flow import InstalledAppFlow
 from prompt_toolkit.styles import Style
 
 from .files_helper import LocalFilesHelper
@@ -24,15 +29,13 @@ class CliUI:
         self.settings = LocalFilesHelper.sh.settings
         self.domains = LocalFilesHelper.dh.domains_dicts
 
-        self.core.set_secrets(
-            self.settings['Secrets']['OAUTH_CLIENT'],
-            self.settings['Secrets']['MONDAY_TOKEN'],
-            self.settings['Secrets'].get('CREDENTIALS'),
-            LocalFilesHelper.sh.update_credentials
-        )
+        self.credentials = {}
 
     def start(self):
         self.clear_console()
+
+        self.credentials = self.get_credentials()
+
         questionary.print('Welcome to copy-helper')
         while True:
             try:
@@ -45,7 +48,34 @@ class CliUI:
                     choices=['exit'], ignore_case=True,
                     match_middle=True, style=self.autocomplete_style).ask().strip().lower()
                 if retry == 'exit':
-                    self.core.exit()
+                    exit()
+
+    def get_credentials(self):
+        creds = None
+
+        scopes = ['https://www.googleapis.com/auth/drive', 'https://www.googleapis.com/auth/spreadsheets.readonly']
+
+        saved_creds = self.settings['Secrets'].get('CREDENTIALS')
+
+        if saved_creds:
+            creds = Credentials.from_authorized_user_info(saved_creds, scopes)
+
+        if creds:
+            if creds.valid:
+                return creds
+
+            elif creds.expired and creds.refresh_token:
+                creds.refresh(Request())
+
+                LocalFilesHelper.sh.update_credentials(json.loads(creds.to_json()))
+                return creds
+
+        flow = InstalledAppFlow.from_client_config(self.settings['Secrets']['OAUTH_CLIENT'], scopes)
+        creds = flow.run_local_server(port=0)
+
+        LocalFilesHelper.sh.update_credentials(json.loads(creds.to_json()))
+
+        return creds
 
     def main_cycle(self):
 
@@ -55,11 +85,10 @@ class CliUI:
             'md': self.make_one_domain,
             'ma': self.make_all,
             'add-domain': self.add_domain,
-            # 'edit-domain':cls.edit_domain,
             'clear-cache': self.clear_cache,
             'clear': self.clear_console,
-            'restart': self.core.restart_script,
-            'exit': self.core.exit
+            'restart': self.restart_script,
+            'exit': exit
         }
 
         menu_options_to_show = menu_options.copy()
@@ -82,6 +111,11 @@ class CliUI:
         if option_fun:
             option_fun()
 
+    @staticmethod
+    def restart_script():
+        logger.debug('Restarting')
+        os.execl(sys.executable, sys.executable, *sys.argv)
+
     def make_one_domain(self):
         domain_name, broadcast_date, str_copies = self.make_domain_gather_info()
         copies_results = self.make_domain(domain_name, broadcast_date, str_copies)
@@ -103,14 +137,14 @@ class CliUI:
         try:
 
             if not str_copies:
-                str_copies = self.core.get_domain_copies(domain_dict, broadcast_date)
+                str_copies = self.core.get_domain_copies(domain_dict, broadcast_date, self.credentials)
 
             if not str_copies:
                 return []
 
             manual_lifts_htmls = LocalFilesHelper.dh.get_lifts_htmls(str_copies, domain_bc_name, date)
 
-            copies = self.core.make_domain(domain_dict, str_copies, manual_lifts_htmls)
+            copies = self.core.make_domain(domain_dict, str_copies, manual_lifts_htmls, self.credentials)
             max_len_str_copy = self.calc_max_len_str_copy(copies)
             for copy in copies:
                 try:

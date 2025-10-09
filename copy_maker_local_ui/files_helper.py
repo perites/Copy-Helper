@@ -74,6 +74,7 @@ class DomainsHelper:
                 if os.path.isdir(full_path):
                     domain_dict = json.load(open(full_path + '/settings.json'))
                     domain_dict['styles']['template'] = open(full_path + '/template.html').read()
+                    domain_dict['products']['monday_token'] = self.settings['Secrets']['MONDAY_TOKEN']
 
                     domains_dicts[name] = domain_dict
 

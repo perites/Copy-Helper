@@ -5,7 +5,6 @@ from . import google_services
 from .crypto_all_products_types import crypto_all_products_types
 from .html_helper import HtmlHelper
 from .offer import Offer, StatusNotAllowed
-from .secrets import Secrets
 
 logger = logging.getLogger(__name__)
 
@@ -41,7 +40,7 @@ class Copy:
         }
 
     def find(self, products_info, manual_lift_html):
-        monday_info = {'mondayId': products_info['mondayId'], 'monday_token': Secrets.monday_token,
+        monday_info = {'mondayId': products_info['mondayId'], 'monday_token': products_info['monday_token'],
                        'partners_folder_id': products_info['partnersFolderId']}
 
         self.offer.find_offer_data(monday_info, products_info['priority'])
