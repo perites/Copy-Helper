@@ -53,7 +53,7 @@ class CliUI:
     def get_credentials(self):
         creds = None
 
-        scopes = ['https://www.googleapis.com/auth/drive', 'https://www.googleapis.com/auth/spreadsheets.readonly']
+        scopes = ['https://www.googleapis.com/auth/drive', 'https://www.googleapis.com/auth/spreadsheets.readonly','https://www.googleapis.com/auth/drive.file']
 
         saved_creds = self.settings['Secrets'].get('CREDENTIALS')
 

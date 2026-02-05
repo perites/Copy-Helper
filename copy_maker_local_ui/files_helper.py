@@ -132,7 +132,7 @@ class DomainsHelper:
 
             path = path_to_domain_results + f'{str_copy}.html'
             path_p = path_to_domain_results + f'{str_copy}-Priority.html'
-
+            path_p_v = path_to_domain_results + f'{str_copy}-Priority-VALIDATION.html'
             if os.path.exists(path):
                 lift_html = open(path, 'r', encoding='utf-8').read()
                 manual_lifts_htmls[str_copy] = lift_html
@@ -141,11 +141,23 @@ class DomainsHelper:
                 lift_html = open(path_p, 'r', encoding='utf-8').read()
                 manual_lifts_htmls[str_copy] = lift_html
 
+            elif os.path.exists(path_p_v):
+                lift_html = open(path_p_v, 'r', encoding='utf-8').read()
+                manual_lifts_htmls[str_copy] = lift_html
+
         return manual_lifts_htmls
 
     @staticmethod
     def save_lift_file(copy, path_to_domain_results):
-        file_name = copy.str_rep + ('-Priority' if copy.offer.priority_info['is_priority'] else '')
+
+        suffix = ''
+        if copy.offer.priority_info['is_priority']:
+            suffix += '-Priority'
+
+        if copy.offer.monday_fields['Validation'] == "Yes":
+            suffix += "-VALIDATION"
+
+        file_name = copy.str_rep + suffix
         path = path_to_domain_results + f'{file_name}.html'
         with open(path, 'w', encoding='utf-8') as file:
             file.write(copy.lift_html)
@@ -165,6 +177,9 @@ class DomainsHelper:
         if copy.offer.priority_info['is_priority']:
             unsub_url_str = f'Unsub link:\n{copy.offer.priority_info['unsub_link']}\n\n'
             suffix = '-Priority'
+
+            if copy.offer.monday_fields['Validation'] == "Yes":
+                suffix += "-VALIDATION"
 
         else:
             unsub_url_str, suffix = '', ''
@@ -267,7 +282,8 @@ class ImageHelper:
             self.find_custom_image(f'{copy.offer.name}_{copy.img_code}', save_image_path)
 
         if self.settings['SaveImages']:
-            for index, image_url in enumerate(copy.lift_images):
+            urls_to_process = set(copy.lift_images)
+            for index, image_url in enumerate(urls_to_process):
                 self.save_image(f'{copy.offer.name}{copy.lift_number}-image-{index + 1}', image_url, save_image_path)
 
 

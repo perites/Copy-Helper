@@ -32,10 +32,18 @@ class GoogleDrive:
 
         if folders:
             return folders[0]
-        else:
-            query = f"name='{folder_name} SA' and mimeType='application/vnd.google-apps.folder' and trashed=false and '{parent_folder_id}' in parents"
-            folders = cls.execute_query(query)
-            return folders[0] if folders else None
+        
+        query = f"name='{folder_name} SA' and mimeType='application/vnd.google-apps.folder' and trashed=false and '{parent_folder_id}' in parents"
+        folders = cls.execute_query(query)
+        if folders:
+            return folders[0]
+
+
+        query = f"name='{folder_name} ' and mimeType='application/vnd.google-apps.folder' and trashed=false and '{parent_folder_id}' in parents"
+        folders = cls.execute_query(query)
+
+
+        return folders[0] if folders else None
 
     @classmethod
     def get_folders_of_folder(cls, parent_folder_id):
@@ -70,6 +78,11 @@ class GoogleDrive:
                 request = cls.drive_service.files().get_media(fileId=file_id)
 
                 content = cls.extract_text_from_docx(request.execute())
+
+            case 'application/vnd.google-apps.spreadsheet':
+                content = GoogleSheets.get_data_from_range(file['id'],'A:A')
+                sls = "\n".join([subject_list[0] if len(subject_list) > 0 else "" for subject_list in content])
+                return sls
 
             case _:
                 logger.warning(f'Unknown mime_type {mime_type}, returning None')

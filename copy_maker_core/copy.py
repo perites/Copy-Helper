@@ -33,10 +33,12 @@ class Copy:
 
     def results(self):
         return {
+            'link': bool('UNKNOWN_TYPE' not in self.tracking_link),
             'html': self.html_found,
             'sl': bool(self.lift_sls),
+            
             'pfooter': bool(self.offer.priority_info['unsub_text']),
-            'link': bool('UNKNOWN_TYPE' not in self.tracking_link)
+            'validation' : bool(self.offer.monday_fields['Validation'] == 'Yes')
         }
 
     def find(self, products_info, manual_lift_html):
@@ -93,8 +95,7 @@ class Copy:
         logger.info(f'Found {len(src_list)} images')
         for index, src_part in enumerate(src_list):
             img_url = src_part.split('"')[1]
-            if img_url not in images_urls:
-                images_urls.append(img_url)
+            images_urls.append(img_url)
 
         return images_urls
 
@@ -120,6 +121,7 @@ class Copy:
         self.lift_sls = sl_file_content
 
     def get_copy_files(self):
+
         lift_folder = google_services.GoogleDrive.get_folder_by_name(f'Lift {self.lift_number}',
                                                                      self.offer.monday_fields[
                                                                          'copy_location_folder_id'])
@@ -190,12 +192,12 @@ class Copy:
         crypto_product_types = crypto_all_products_types.get(self.offer.name)
 
         if not crypto_product_types:
-            logger.warning(f'{self.offer.name} does not have according type, using regular type "B"')
-            return 'B'
+            logger.warning(f'{self.offer.name} does not have according type, using type "DeadEmail"')
+            return 'DeadEmail'
 
         logger.info('Using link type for Crypto (CO)')
-
-        return str(crypto_product_types.get(int(self.lift_number), 'DeadEmail'))
+        value = str(crypto_product_types.get(int(self.lift_number), 'DeadEmail'))
+        return value
 
     def make_custom_unsub_link(self, unsub_link_template):
         if not self.offer.priority_info['unsub_id']:
